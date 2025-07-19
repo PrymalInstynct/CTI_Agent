@@ -72,6 +72,32 @@ A command-line tool for comprehensive threat intelligence analysis of software a
     cti-agent --update-data
     ```
 
+## Report Output
+
+The agent generates a comprehensive Markdown report directly to standard output. This report includes:
+
+- An Executive Summary with key metrics.
+- A Prioritized Vulnerabilities table, ordered by the calculated `RiskScore`.
+- Detailed analysis for each high-priority vulnerability, including:
+  - CVE ID, CVSS score, and CISA KEV status.
+  - CWE and MITRE ATT&CK mappings.
+  - Actionable defensive measures (Sigma, Snort, Yara rules).
+
+You can redirect the output to a file for easy viewing and sharing:
+
+```bash
+cti-agent --sbom-file <path-to-your-sbom.json> > analysis_report.md
+```
+
+## Error Handling
+
+The agent provides clear and user-friendly error messages for common issues, such as:
+
+- Invalid or non-existent SBOM file paths.
+- Missing or invalid API keys.
+- Malformed SBOM files.
+- External API errors (e.g., rate limiting).
+
 ## Intelligent Prioritization
 
 This agent goes beyond standard CVSS-based scoring. It employs a multi-factor risk algorithm to provide a more realistic and actionable priority list. The `RiskScore` for each vulnerability is calculated based on:

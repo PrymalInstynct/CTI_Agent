@@ -1,6 +1,7 @@
 """Main CLI entry point for the CTI Agent."""
 import argparse
-from .agent import CTI_Agent_v2
+import os
+from .agent import run_analysis
 from .data_manager import update_local_data
 
 def main():
@@ -8,15 +9,25 @@ def main():
     parser = argparse.ArgumentParser(description="Cyber Threat Intelligence Agent")
     parser.add_argument("--version", action="version", version="%(prog)s 2.0.0")
     parser.add_argument("--update-data", action="store_true", help="Update local threat intelligence data.")
+    parser.add_argument("--sbom-file", type=str, help="Path to the CycloneDX SBOM file for analysis.")
 
-    args, remaining_argv = parser.parse_known_args()
+    args = parser.parse_args()
 
     if args.update_data:
         update_local_data()
         print("Local threat intelligence data updated successfully.")
         return
 
-    CTI_Agent_v2.to_cli(remaining_argv)
+    if args.sbom_file:
+        if not os.path.exists(args.sbom_file):
+            print(f"Error: SBOM file not found at {args.sbom_file}")
+            return
+        try:
+            run_analysis(args.sbom_file)
+        except Exception as e:
+            print(f"An error occurred during analysis: {e}")
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

@@ -103,8 +103,16 @@ def correlate_with_cisa_kev(cve_ids: list[str]) -> dict:
     Returns:
         A dictionary mapping CVE IDs to their KEV details.
     """
-    with open(os.path.join(os.path.dirname(__file__), "..", "frameworks", "cisa_kev.json"), 'r') as f:
-        kev_data = json.load(f)
+    kev_file_path = os.path.join(os.path.dirname(__file__), "..", "frameworks", "cisa_kev.json")
+    try:
+        with open(kev_file_path, 'r') as f:
+            kev_data = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: CISA KEV data file not found at {kev_file_path}. Please run 'cti-agent --update-data' to download it.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error: Could not decode CISA KEV data from {kev_file_path}. The file might be corrupted.")
+        return {}
 
     kev_info = {}
     for cve_id in cve_ids:

@@ -85,6 +85,71 @@ def run_analysis(sbom_file_path: str):
     # Sort vulnerabilities by risk score
     enriched_vulnerabilities.sort(key=lambda x: x["risk_score"], reverse=True)
 
-    # Generate the report (for now, just print the results)
+    # Generate the report
+    report = generate_markdown_report(enriched_vulnerabilities, sbom_file_path, len(components))
+    print(report)
+
+def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_components):
+    """Generates a Markdown report from the analysis results."""
+    report = """# Cyber Threat Intelligence Analysis Report
+
+**SBOM File:** `{sbom_file_path}`
+
+## Executive Summary
+
+- **Total Components Scanned:** {total_components}
+- **Total Vulnerabilities Found:** {total_vulnerabilities}
+- **Actively Exploited Vulnerabilities (CISA KEV):** {kev_count}
+
+## Prioritized Vulnerabilities
+
+| CVE ID | CVSS v3.1 Score | CISA KEV | Risk Score |
+| --- | --- | --- | --- |
+{vulnerability_table}
+
+## Detailed Vulnerability Analysis
+
+{detailed_analysis}
+"""
+
+    total_vulnerabilities = len(enriched_vulnerabilities)
+    kev_count = sum(1 for item in enriched_vulnerabilities if item["kev_info"])
+
+    vulnerability_table = ""
     for item in enriched_vulnerabilities:
-        print(f"CVE: {item['vulnerability'].cve_id}, Risk Score: {item['risk_score']}")
+        vulnerability = item["vulnerability"]
+        kev_status = "Yes" if item["kev_info"] else "No"
+        vulnerability_table += f"| {vulnerability.cve_id} | {vulnerability.cvss_score} | {kev_status} | {item['risk_score']:.2f} |\n"
+
+    detailed_analysis = ""
+    for item in enriched_vulnerabilities:
+        vulnerability = item["vulnerability"]
+        detailed_analysis += f"### {vulnerability.cve_id}\n\n"
+        detailed_analysis += f"**CVSS v3.1 Base Score:** {vulnerability.cvss_score}\n"
+        detailed_analysis += f"**CISA KEV Status:** {'Actively Exploited' if item['kev_info'] else 'Not Listed'}\n"
+        detailed_analysis += f"**CWE:** {vulnerability.weaknesses[0] if vulnerability.weaknesses else 'N/A'}\n"
+        detailed_analysis += f"**Description:** {vulnerability.description}\n\n"
+
+        if item["attack_mappings"]:
+            detailed_analysis += "**MITRE ATT&CK Mapping:**\n"
+            for mapping in item["attack_mappings"]:
+                detailed_analysis += f"- **Tactic:** {mapping['tactic']}\n"
+                detailed_analysis += f"- **Technique:** {mapping['technique_id']}: {mapping['technique_name']}\n"
+            detailed_analysis += "\n"
+
+        if item["defensive_measures"]:
+            detailed_analysis += "**Defensive Measures:**\n"
+            for measure_type, rules in item["defensive_measures"].items():
+                detailed_analysis += f"**{measure_type.upper()} Rules:**\n```\n"
+                for rule in rules:
+                    detailed_analysis += f"{rule}\n"
+                detailed_analysis += "```\n"
+
+    return report.format(
+        sbom_file_path=sbom_file_path,
+        total_components=total_components,
+        total_vulnerabilities=total_vulnerabilities,
+        kev_count=kev_count,
+        vulnerability_table=vulnerability_table,
+        detailed_analysis=detailed_analysis,
+    )

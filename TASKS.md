@@ -58,15 +58,15 @@ This checklist is generated from the Product Requirements Document (v2.0).
 
 ## Phase 5: Reporting & Finalization
 
-- [ ] **Data Modeling**
-  - [ ] Define all required Pydantic models (`Vulnerability`, `EnrichedVulnerability`, `AnalysisReport`) in `src/cti_agent/models.py`.
-- [ ] **Report Generation**
-  - [ ] Implement the final Markdown report generation logic.
-  - [ ] Ensure the report structure is hierarchical and matches the specification in FR-3.5.2.
-  - [ ] Ensure the report correctly flags actively exploited vulnerabilities and includes all enrichment data.
-- [ ] **Error Handling & Usability**
-  - [ ] Implement comprehensive error handling for all failure scenarios listed in FR-3.1.4.
-  - [ ] Review and refine all CLI output for clarity and readability.
+- [x] **Data Modeling**
+  - [x] Define all required Pydantic models (`Vulnerability`, `EnrichedVulnerability`, `AnalysisReport`) in `src/cti_agent/models.py`.
+- [x] **Report Generation**
+  - [x] Implement the final Markdown report generation logic.
+  - [x] Ensure the report structure is hierarchical and matches the specification in FR-3.5.2.
+  - [x] Ensure the report correctly flags actively exploited vulnerabilities and includes all enrichment data.
+- [x] **Error Handling & Usability**
+  - [x] Implement comprehensive error handling for all failure scenarios listed in FR-3.1.4.
+  - [x] Review and refine all CLI output for clarity and readability.
 
 ## Phase 6: Testing & Quality Assurance
 
