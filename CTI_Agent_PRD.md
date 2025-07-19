@@ -258,7 +258,7 @@ This section defines the internal architecture of the Pydantic AI Agent, which s
 
 - FR-4.1.1: Agent Initialization: The core of the application will be an instance of the pydantic_ai.Agent class. It will be configured to use the Gemini 2.5 Flash model as its primary reasoning engine, accessed via a secure API key.
 
-- FR-4.1.2: Model Pluggability: The choice of LLM will be designed for flexibility. The model identifier (e.g., 'google-gla:gemini-1.5-flash') will be sourced from a configuration setting or environment variable. This ensures that the application is not locked into a single provider and can easily be adapted to use other models supported by Pydantic AI, such as those from OpenAI, Mistral, or Anthropic, as the technology landscape evolves.
+- FR-4.1.2: Model Pluggability: The choice of LLM will be designed for flexibility. The model identifier (e.g., 'google-gla:gemini-2.5-flash') will be sourced from a configuration setting or environment variable. This ensures that the application is not locked into a single provider and can easily be adapted to use other models supported by Pydantic AI, such as those from OpenAI, Mistral, or Anthropic, as the technology landscape evolves.
 
 - FR-4.1.3: System Prompt: The agent will be initialized with a carefully crafted master system prompt that establishes its persona, defines its high-level objective, and sets the tone for its operation.
 
