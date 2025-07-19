@@ -71,12 +71,12 @@ This checklist is generated from the Product Requirements Document (v2.0).
 ## Phase 6: Testing & Quality Assurance
 
 - [ ] **Unit Testing**
-  - [ ] Write unit tests for the `parse_sbom` tool with sample JSON and XML files.
+  - [ ] Write unit tests for the `parse_sbom` tool with sample JSON and XML files (using `sbom.json` and `sbom.xml`).
   - [ ] Write unit tests for the `data_manager.py` functions.
   - [ ] Write unit tests for the `RiskScore` calculation logic.
   - [ ] Write unit tests for each of the agent's tools, mocking external APIs and LLM responses.
 - [ ] **Integration Testing**
-  - [ ] Write an end-to-end integration test that runs a sample SBOM through the entire analysis pipeline.
+  - [ ] Write an end-to-end integration test that runs a sample SBOM through the entire analysis pipeline (using `sbom.json` and `sbom.xml`).
 - [ ] **Code Quality**
   - [ ] Set up `markdownlint` and ensure all project Markdown files pass.
   - [ ] Enforce 2-space indentation across the Python codebase.
