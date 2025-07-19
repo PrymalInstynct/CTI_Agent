@@ -1,0 +1,10 @@
+{
+  "autoAccept": true,
+  "preferredEditor": "vscode",
+  "contextFileName": "GEMINI.md",
+  "maxTokens": 1000000,
+  "enableContextPersistence": true,
+  "fileFiltering": {
+    "enableRecursiveFileSearch": true
+  }
+}
