@@ -4,11 +4,15 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 ## Features
 
-- Automated vulnerability discovery from CycloneDX SBOMs.
-- AI-driven CPE generation and vulnerability contextualization.
-- Correlation with CISA KEV, MITRE ATT&CK, and CWE.
-- Prioritized reporting and actionable defensive measures.
-- SBOM persistence in a local MongoDB database.
+- **Automated SBOM Analysis**: Parses CycloneDX SBOMs (JSON/XML) to identify all software components.
+- **AI-Powered Vulnerability Enrichment**: Leverages the Gemini 2.5 Flash model to:
+  - Dynamically construct accurate Common Platform Enumeration (CPE) strings for components.
+  - Map vulnerabilities to MITRE ATT&CK® tactics and techniques to understand adversary behavior.
+  - Identify the underlying software weaknesses by linking to the Common Weakness Enumeration (CWE™).
+  - Find and provide actionable defensive measures, including Sigma, Snort, and Yara rules.
+- **Real-World Threat Correlation**: Flags vulnerabilities present in the CISA Known Exploited Vulnerabilities (KEV) catalog, highlighting immediate threats.
+- **Intelligent Risk Prioritization**: Moves beyond simple CVSS scores by using a multi-factor algorithm to prioritize vulnerabilities based on severity, real-world exploitation, and potential impact.
+- **Persistent Analysis**: Stores every analyzed SBOM in a local MongoDB database for historical tracking and future analysis.
 
 ## Prerequisites
 
@@ -67,6 +71,16 @@ A command-line tool for comprehensive threat intelligence analysis of software a
     ```bash
     cti-agent --update-data
     ```
+
+## Intelligent Prioritization
+
+This agent goes beyond standard CVSS-based scoring. It employs a multi-factor risk algorithm to provide a more realistic and actionable priority list. The `RiskScore` for each vulnerability is calculated based on:
+
+- **Severity (CVSS)**: The baseline severity score.
+- **Exploitation Status (CISA KEV)**: A high-impact factor that heavily weights vulnerabilities known to be actively exploited in the wild.
+- **Threat Context (ATT&CK)**: The potential impact of an exploit, derived from its mapping to MITRE ATT&CK tactics.
+
+This approach ensures that your team focuses on the vulnerabilities that pose the most significant and immediate threat to your organization.
 
 ## Project Directory Structure
 

@@ -44,17 +44,17 @@ This checklist is generated from the Product Requirements Document (v2.0).
 
 ## Phase 4: AI-Powered Enrichment & Analysis
 
-- [ ] **AI Agent Definition**
-  - [ ] Create `src/cti_agent/agent.py` and define the main Pydantic AI Agent.
-  - [ ] Implement the master system prompt as defined in FR-4.1.3.
-  - [ ] Configure the agent to use the specified Gemini model `gemini-2.5-flash`.
-- [ ] **AI-Driven Tools**
-  - [ ] Implement the `get_cpe_for_component` tool with robust few-shot prompting.
-  - [ ] Implement the `map_cve_to_attack` tool to link CVEs to MITRE ATT&CK techniques.
-  - [ ] Implement the `find_defensive_measures` tool to find Sigma, Snort, or Yara rules.
-- [ ] **Orchestration & Prioritization**
-  - [ ] Implement the primary orchestration logic in `agent.py` to follow the workflow from FR-4.3.1.
-  - [ ] Implement the multi-factor `RiskScore` algorithm (FR-4.4) to prioritize vulnerabilities.
+- [x] **AI Agent Definition**
+  - [x] Create `src/cti_agent/agent.py` and define the main Pydantic AI Agent.
+  - [x] Implement the master system prompt as defined in FR-4.1.3.
+  - [x] Configure the agent to use the specified Gemini model `gemini-2.5-flash`.
+- [x] **AI-Driven Tools**
+  - [x] Implement the `get_cpe_for_component` tool with robust few-shot prompting.
+  - [x] Implement the `map_cve_to_attack` tool to link CVEs to MITRE ATT&CK techniques.
+  - [x] Implement the `find_defensive_measures` tool to find Sigma, Snort, or Yara rules.
+- [x] **Orchestration & Prioritization**
+  - [x] Implement the primary orchestration logic in `agent.py` to follow the workflow from FR-4.3.1.
+  - [x] Implement the multi-factor `RiskScore` algorithm (FR-4.4) to prioritize vulnerabilities.
 
 ## Phase 5: Reporting & Finalization
 
