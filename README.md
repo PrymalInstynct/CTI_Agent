@@ -46,13 +46,13 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 ## Database Setup (MongoDB)
 
-1.  Start a local MongoDB instance using Docker Compose:
+1. Start a local MongoDB instance using Docker Compose:
 
     ```bash
     docker-compose up -d
     ```
 
-2.  Update the `.env` file with your MongoDB connection details if they differ from the defaults.
+2. Update the `.env` file with your MongoDB connection details if they differ from the defaults.
 
 ## Usage
 
@@ -70,7 +70,7 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 ## Project Directory Structure
 
-```
+```bash
 \ cyber-threat-agent
 |--.env.example
 |--.gitignore
