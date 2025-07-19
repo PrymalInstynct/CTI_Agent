@@ -31,16 +31,16 @@ This checklist is generated from the Product Requirements Document (v2.0).
 
 ## Phase 3: Core SBOM Analysis Logic
 
-- [ ] **SBOM Parsing**
-  - [ ] Implement the `parse_sbom` agent tool in `src/cti_agent/tools.py`.
-  - [ ] Ensure the tool handles both JSON and XML CycloneDX formats.
-  - [ ] Define the internal `Component` Pydantic model in `src/cti_agent/models.py`.
-  - [ ] Implement logic to store the parsed SBOM in MongoDB.
-- [ ] **Vulnerability Correlation**
-  - [ ] Implement the `query_nvd_for_cves` agent tool, using a component's CPE.
-    - [ ] Handle NVD API rate limiting with exponential backoff.
-    - [ ] Ensure the tool uses the `NVD_API_KEY` from environment variables.
-  - [ ] Implement the `correlate_with_cisa_kev` agent tool, checking against the local KEV data.
+- [x] **SBOM Parsing**
+  - [x] Implement the `parse_sbom` agent tool in `src/cti_agent/tools.py`.
+  - [x] Ensure the tool handles both JSON and XML CycloneDX formats.
+  - [x] Define the internal `Component` Pydantic model in `src/cti_agent/models.py`.
+  - [x] Implement logic to store the parsed SBOM in MongoDB.
+- [x] **Vulnerability Correlation**
+  - [x] Implement the `query_nvd_for_cves` agent tool, using a component's CPE.
+    - [x] Handle NVD API rate limiting with exponential backoff.
+    - [x] Ensure the tool uses the `NVD_API_KEY` from environment variables.
+  - [x] Implement the `correlate_with_cisa_kev` agent tool, checking against the local KEV data.
 
 ## Phase 4: AI-Powered Enrichment & Analysis
 

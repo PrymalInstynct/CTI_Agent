@@ -42,7 +42,7 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 2. Obtain the necessary API keys and update the `.env` file:
     - `GEMINI_API_KEY`: Your Google Gemini API key.
-    - `NVD_API_KEY`: Your NVD API key (from [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key)).
+    - `NVD_API_KEY`: Your NVD API key (from [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key)). This is highly recommended to avoid rate limiting and ensure reliable vulnerability lookups.
 
 ## Database Setup (MongoDB)
 
