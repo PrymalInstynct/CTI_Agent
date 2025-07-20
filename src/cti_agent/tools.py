@@ -5,7 +5,6 @@ import datetime
 import time
 import requests
 from cyclonedx.model.bom import Bom
-from cyclonedx.io import BomIO
 from .models import get_db, Component, SBOM, Vulnerability
 
 
@@ -24,13 +23,15 @@ def parse_sbom(sbom_file_path: str) -> list[Component]:
 
     if sbom_file_path.endswith('.json'):
         sbom_format = 'json'
-        bom = Bom.from_json(raw_content)
+        bom = Bom.from_json(json.loads(raw_content))
         raw_dict = json.loads(raw_content)
     elif sbom_file_path.endswith('.xml'):
         sbom_format = 'xml'
-        bom = Bom.from_xml(raw_content)
+        import xml.etree.ElementTree as ET
+        bom = Bom.from_xml(ET.fromstring(raw_content))
         # Converting XML to JSON for storing in MongoDB
-        raw_dict = json.loads(bom.to_json())
+        import xmltodict
+        raw_dict = xmltodict.parse(raw_content)
     else:
         raise ValueError("Unsupported SBOM file format. Please use JSON or XML.")
 
@@ -47,12 +48,12 @@ def parse_sbom(sbom_file_path: str) -> list[Component]:
 
     sbom_doc = SBOM(
         filename=os.path.basename(sbom_file_path),
-        timestamp=datetime.datetime.utcnow().isoformat(),
+        timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
         sbom_format=sbom_format,
         raw_content=raw_dict,
         components_count=len(components),
     )
-    db[SBOM.Config.collection_name].insert_one(sbom_doc.dict())
+    db[SBOM.Config.collection_name].insert_one(sbom_doc.model_dump())
 
     return components
 
@@ -66,12 +67,13 @@ def query_nvd_for_cves(cpe_string: str) -> list[Vulnerability]:
         A list of vulnerabilities.
     """
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-    headers = {"apiKey": os.getenv("NVD_API_KEY")}
+    headers = {"apiKey": os.getenv("NVD_API_KEY"), "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
     params = {"cpeName": cpe_string}
 
     for attempt in range(3):
         try:
             response = requests.get(base_url, headers=headers, params=params)
+            
             response.raise_for_status()
             data = response.json()
             vulnerabilities = []
@@ -86,12 +88,18 @@ def query_nvd_for_cves(cpe_string: str) -> list[Vulnerability]:
                     )
                 )
             return vulnerabilities
-        except requests.exceptions.RequestException as e:
-            if e.response.status_code == 403:
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                # No vulnerabilities found for this CPE, which is a valid scenario
+                return []
+            elif e.response.status_code == 403:
                 print(f"Rate limit exceeded. Retrying in {2 ** attempt} seconds...")
                 time.sleep(2 ** attempt)
             else:
                 raise e
+        except requests.exceptions.RequestException as e:
+            # Catch any other request-related errors
+            raise e
     return []
 
 def correlate_with_cisa_kev(cve_ids: list[str]) -> dict:
@@ -136,7 +144,7 @@ def get_cpe_for_component(component_name: str, component_version: str) -> str:
     """
     # This is a simplified implementation. A real implementation would use a more
     # sophisticated method to generate the CPE string.
-    return f"cpe:2.3:a:{component_name.lower()}:{component_name.lower()}:{component_version}:*:*:*:*:*:*:*"
+    return f"cpe:2.3:a:{component_name.lower().replace(' ', '_')}:{component_name.lower().replace(' ', '_')}:{component_version}:*:*:*:*:*:*:*"
 
 
 def map_cve_to_attack(cve_id: str, cve_description: str) -> list[dict]:

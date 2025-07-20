@@ -108,6 +108,48 @@ This agent goes beyond standard CVSS-based scoring. It employs a multi-factor ri
 
 This approach ensures that your team focuses on the vulnerabilities that pose the most significant and immediate threat to your organization.
 
+## Testing
+
+The project includes a suite of unit and integration tests to ensure code quality and correctness.
+
+### Running All Tests
+
+To run all tests, use the following command:
+
+```bash
+uv run python3 -m unittest discover tests
+```
+
+### Running Unit Tests
+
+To run the unit tests for a specific module, use the following commands:
+
+- **Agent Tests:**
+
+    ```bash
+    uv run python3 -m unittest tests/test_agent.py
+    ```
+
+- **Data Manager Tests:**
+
+    ```bash
+    uv run python3 -m unittest tests/test_data_manager.py
+    ```
+
+- **Tools Tests:**
+
+    ```bash
+    uv run python3 -m unittest tests/test_tools.py
+    ```
+
+### Running Integration Tests
+
+To run the end-to-end integration tests, use the following command:
+
+```bash
+python3 -m unittest tests/test_integration.py
+```
+
 ## Project Directory Structure
 
 ```bash

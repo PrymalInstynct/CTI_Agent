@@ -3,13 +3,18 @@ name = "cti-agent"
 version = "2.0.0"
 description = "A Cyber Threat Intelligence Agent for SBOM analysis."
 authors = [{ name = "Chad Zimmerman", email = "zimmermanc@gmail.com" }]
+requires-python = ">=3.10"
 dependencies = [
     "pydantic",
     "pydantic-ai",
     "cyclonedx-python-lib",
     "pymongo",
     "python-dotenv",
+    "xmltodict",
 ]
+
+[project.scripts]
+cti-agent = "cti_agent.main:cli_entrypoint"
 
 
 

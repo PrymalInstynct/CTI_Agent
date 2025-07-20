@@ -1,10 +1,11 @@
 """Main CLI entry point for the CTI Agent."""
 import argparse
 import os
+import asyncio
 from .agent import run_analysis
 from .data_manager import update_local_data
 
-def main():
+async def main():
     """Main function to run the CTI Agent CLI."""
     parser = argparse.ArgumentParser(description="Cyber Threat Intelligence Agent")
     parser.add_argument("--version", action="version", version="%(prog)s 2.0.0")
@@ -23,11 +24,14 @@ def main():
             print(f"Error: SBOM file not found at {args.sbom_file}")
             return
         try:
-            run_analysis(args.sbom_file)
+            await run_analysis(args.sbom_file)
         except Exception as e:
             print(f"An error occurred during analysis: {e}")
     else:
         parser.print_help()
 
+def cli_entrypoint():
+    asyncio.run(main())
+
 if __name__ == "__main__":
-    main()
+    cli_entrypoint()

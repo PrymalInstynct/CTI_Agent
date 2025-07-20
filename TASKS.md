@@ -70,17 +70,24 @@ This checklist is generated from the Product Requirements Document (v2.0).
 
 ## Phase 6: Testing & Quality Assurance
 
-- [ ] **Unit Testing**
-  - [ ] Write unit tests for the `parse_sbom` tool with sample JSON and XML files (using `sbom.json` and `sbom.xml`).
-  - [ ] Write unit tests for the `data_manager.py` functions.
-  - [ ] Write unit tests for the `RiskScore` calculation logic.
-  - [ ] Write unit tests for each of the agent's tools, mocking external APIs and LLM responses.
-- [ ] **Integration Testing**
-  - [ ] Write an end-to-end integration test that runs a sample SBOM through the entire analysis pipeline (using `sbom.json` and `sbom.xml`).
-- [ ] **Code Quality**
-  - [ ] Set up `markdownlint` and ensure all project Markdown files pass.
-  - [ ] Enforce 2-space indentation across the Python codebase.
-  - [ ] Run a final review of the code against all non-functional requirements.
+- [x] **Unit Testing**
+  - [x] Write unit tests for the `parse_sbom` tool with sample JSON and XML files (using `sbom.json` and `sbom.xml`).
+  - [x] Write unit tests for the `data_manager.py` functions.
+  - [x] Write unit tests for the `RiskScore` calculation logic.
+  - [x] Write unit tests for each of the agent's tools, mocking external APIs and LLM responses.
+- [x] **Integration Testing**
+  - [x] Write an end-to-end integration test that runs a sample SBOM through the entire analysis pipeline (using `sbom.json` and `sbom.xml`).
+- [x] **Code Quality**
+  - [x] Set up `markdownlint` and ensure all project Markdown files pass.
+  - [x] Enforce 2-space indentation across the Python codebase.
+  - [x] Run a final review of the code against all non-functional requirements.
+
+## Phase 7: Feature Enhancements
+
+- [ ] Include [EPSS](https://www.first.org/epss/) in calculation of vulnerability priority
+- [ ] Have the LLM create a 1 to 2 paragraph summary of the analysis about the specific vulnerabilites found after all of the SBOM analysis is complete
+- [ ] Enable "Chatbot" functionality that will enable to user to quary for vulnerability information based on the SBOM input stored in the MongoDBand have the LLM provide reports and results back
+- [ ] Write the Markdown report to a file in a folder rather then directly to standard output
 
 ## Discovered During Work
 

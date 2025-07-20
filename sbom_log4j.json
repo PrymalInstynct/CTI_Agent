@@ -1,0 +1,40 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:f7b3b3b3-3b3b-3b3b-3b3b-3b3b3b3b3b3b",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-10-27T10:00:00Z",
+    "tools": [
+      {
+        "vendor": "Example",
+        "name": "SBOM Generator",
+        "version": "1.0.0"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1?packaging=jar",
+      "name": "log4j-core",
+      "version": "2.14.1",
+      "description": "Apache Log4j Core is a logging framework for Java applications.",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1?packaging=jar",
+      "cpe": "cpe:2.3:a:apache:log4j:2.14.1:*:*:*:*:*:*:*",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    }
+  ]
+}

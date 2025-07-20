@@ -1,15 +1,11 @@
 """Pydantic AI Agent for the CTI Agent."""
 import os
 from pydantic_ai import Agent
-from pydantic_ai.llm.google import Google
+from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from . import tools
+from .models import Component
 
 # Configure the LLM
-llm = Google(
-  api_key=os.getenv("GEMINI_API_KEY"),
-  model_name='google-gla:gemini-2.5-flash'
-)
-
 # Define the master system prompt
 system_prompt = """You are an expert Cyber Threat Intelligence Analyst. 
 Your mission is to analyze a list of software components from a Software Bill of Materials (SBOM). 
@@ -19,7 +15,8 @@ You must be precise, factual, and follow the instructions of each tool call exac
 
 # Create the agent
 agent = Agent(
-  [
+  'google-gla:gemini-2.5-flash',
+  tools=[
     tools.parse_sbom,
     tools.query_nvd_for_cves,
     tools.correlate_with_cisa_kev,
@@ -27,7 +24,6 @@ agent = Agent(
     tools.map_cve_to_attack,
     tools.find_defensive_measures
   ],
-  llm=llm,
   system_prompt=system_prompt
 )
 
@@ -54,22 +50,30 @@ def calculate_risk_score(vulnerability, kev_info, attack_mappings):
     risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact)
     return risk_score
 
-def run_analysis(sbom_file_path: str):
+async def run_analysis(sbom_file_path: str):
     """Runs the full analysis on an SBOM file."""
-    components = agent.run(f"Parse the SBOM file at {sbom_file_path}")
+    components = tools.parse_sbom(sbom_file_path)
     
     enriched_vulnerabilities = []
     for component in components:
         if not component.cpe:
-            component.cpe = agent.run(f"Generate a CPE for {component.name} version {component.version}")
+            # Use the LLM to generate the CPE if it's missing
+            cpe_prompt = (
+                f"Generate a CPE 2.3 string for the following software component. "
+                f"Provide only the CPE string and nothing else. "
+                f"Component Name: {component.name}, Version: {component.version}. "
+                f"Example: For 'Apache Log4j', version '2.14.1', the CPE is cpe:2.3:a:apache:log4j:2.14.1:*:*:*:*:*:*:*"
+            )
+            cpe_result = await agent.run(cpe_prompt)
+            component.cpe = cpe_result.output.strip()
 
-        vulnerabilities = agent.run(f"Query NVD for CVEs using CPE: {component.cpe}")
+        vulnerabilities = tools.query_nvd_for_cves(component.cpe)
         cve_ids = [v.cve_id for v in vulnerabilities]
-        kev_info = agent.run(f"Correlate CVEs with CISA KEV: {cve_ids}")
+        kev_info = tools.correlate_with_cisa_kev(cve_ids)
 
         for vulnerability in vulnerabilities:
-            attack_mappings = agent.run(f"Map CVE to ATT&CK: {vulnerability.cve_id} - {vulnerability.description}")
-            defensive_measures = agent.run(f"Find defensive measures for {vulnerability.cve_id}")
+            attack_mappings = tools.map_cve_to_attack(vulnerability.cve_id, vulnerability.description)
+            defensive_measures = tools.find_defensive_measures(vulnerability.cve_id)
             risk_score = calculate_risk_score(vulnerability, kev_info, attack_mappings)
 
             enriched_vulnerabilities.append(
@@ -106,7 +110,6 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
 | CVE ID | CVSS v3.1 Score | CISA KEV | Risk Score |
 | --- | --- | --- | --- |
 {vulnerability_table}
-
 ## Detailed Vulnerability Analysis
 
 {detailed_analysis}
@@ -125,25 +128,25 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
     for item in enriched_vulnerabilities:
         vulnerability = item["vulnerability"]
         detailed_analysis += f"### {vulnerability.cve_id}\n\n"
-        detailed_analysis += f"**CVSS v3.1 Base Score:** {vulnerability.cvss_score}\n"
-        detailed_analysis += f"**CISA KEV Status:** {'Actively Exploited' if item['kev_info'] else 'Not Listed'}\n"
-        detailed_analysis += f"**CWE:** {vulnerability.weaknesses[0] if vulnerability.weaknesses else 'N/A'}\n"
-        detailed_analysis += f"**Description:** {vulnerability.description}\n\n"
+        detailed_analysis += f"**CVSS v3.1 Base Score:** {vulnerability.cvss_score}\n\n"
+        detailed_analysis += f"**CISA KEV Status:** {'Actively Exploited' if item['kev_info'] else 'Not Listed'}\n\n"
+        detailed_analysis += f"**CWE:** {vulnerability.weaknesses[0] if vulnerability.weaknesses else 'N/A'}\n\n"
+        detailed_analysis += f"**Description:** {vulnerability.description}\n"
 
         if item["attack_mappings"]:
-            detailed_analysis += "**MITRE ATT&CK Mapping:**\n"
+            detailed_analysis += "\n**MITRE ATT&CK Mapping:**\n\n"
             for mapping in item["attack_mappings"]:
                 detailed_analysis += f"- **Tactic:** {mapping['tactic']}\n"
                 detailed_analysis += f"- **Technique:** {mapping['technique_id']}: {mapping['technique_name']}\n"
             detailed_analysis += "\n"
 
         if item["defensive_measures"]:
-            detailed_analysis += "**Defensive Measures:**\n"
+            detailed_analysis += "**Defensive Measures:**\n\n"
             for measure_type, rules in item["defensive_measures"].items():
-                detailed_analysis += f"**{measure_type.upper()} Rules:**\n```\n"
+                detailed_analysis += f"**{measure_type.upper()} Rules:**\n\n```yaml\n"
                 for rule in rules:
                     detailed_analysis += f"{rule}\n"
-                detailed_analysis += "```\n"
+                detailed_analysis += "```\n\n"
 
     return report.format(
         sbom_file_path=sbom_file_path,
