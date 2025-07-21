@@ -15,11 +15,12 @@ This checklist is generated from the Product Requirements Document (v3.0).
   - [x] Update the orchestration logic in `agent.py` to call this tool after all vulnerabilities have been analyzed.
   - [x] Add the generated summary to the top of the Markdown report.
 
-- [ ] **File-Based Reporting**
-  - [ ] Create a `reports/` directory in the project root.
-  - [ ] Modify the main CLI logic in `src/cti_agent/main.py` to save the Markdown report to a file in the `reports/` directory instead of printing to stdout.
-  - [ ] Implement a file naming convention (e.g., `report-<sbom_name>-<timestamp>.md`).
-  - [ ] Ensure the application prints the path to the generated report file upon completion.
+- [x] **File-Based Reporting**
+  - [x] Create a `reports/` directory in the project root.
+  - [x] Modify the main CLI logic in `src/cti_agent/main.py` to save the Markdown report to a file in the `reports/` directory instead of printing to stdout.
+  - [x] Implement a file naming convention (e.g., `report-<sbom_name>-<timestamp>.md`).
+  - [x] Ensure the application prints the path to the generated report file upon completion.
+  - [x] Ensure hyperlinks to the correct CWE and MITRE ATT&CK TTPs are included in the report.
 
 ## Phase 2: Interactive Chatbot Functionality
 

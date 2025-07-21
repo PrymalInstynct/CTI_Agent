@@ -2,6 +2,7 @@
 import argparse
 import os
 import asyncio
+import datetime
 from .agent import run_analysis
 from .data_manager import update_local_data
 
@@ -24,7 +25,17 @@ async def main():
             print(f"Error: SBOM file not found at {args.sbom_file}")
             return
         try:
-            await run_analysis(args.sbom_file)
+            report_content = await run_analysis(args.sbom_file)
+            
+            # Implement file naming convention
+            sbom_filename = os.path.basename(args.sbom_file)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            report_filename = f"report-{os.path.splitext(sbom_filename)[0]}-{timestamp}.md"
+            report_path = os.path.join("reports", report_filename)
+
+            with open(report_path, "w") as f:
+                f.write(report_content)
+            print(f"Analysis complete. Report saved to: {report_path}")
         except Exception as e:
             print(f"An error occurred during analysis: {e}")
     else:

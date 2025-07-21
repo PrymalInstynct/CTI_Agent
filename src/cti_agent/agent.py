@@ -113,7 +113,7 @@ async def run_analysis(sbom_file_path: str):
 
     # Generate the report
     report = generate_markdown_report(enriched_vulnerabilities, sbom_file_path, len(components), summary)
-    print(report)
+    return report
 
 
 def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_components, summary):
@@ -158,14 +158,14 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
         detailed_analysis += f"**CVSS v3.1 Base Score:** {vulnerability.cvss_score}\n\n"
         detailed_analysis += f"**CISA KEV Status:** {'Actively Exploited' if item['kev_info'] else 'Not Listed'}\n\n"
         detailed_analysis += f"**EPSS Score:** {epss_score_str}\n\n"
-        detailed_analysis += f"**CWE:** {vulnerability.weaknesses[0] if vulnerability.weaknesses else 'N/A'}\n\n"
+        detailed_analysis += f"**CWE:** [{vulnerability.weaknesses[0] if vulnerability.weaknesses else 'N/A'}](https://cwe.mitre.org/data/definitions/{vulnerability.weaknesses[0].split('-')[1]}.html)\n\n"
         detailed_analysis += f"**Description:** {vulnerability.description}\n"
 
         if item["attack_mappings"]:
             detailed_analysis += "\n**MITRE ATT&CK Mapping:**\n\n"
             for mapping in item["attack_mappings"]:
-                detailed_analysis += f"- **Tactic:** {mapping['tactic']}\n"
-                detailed_analysis += f"- **Technique:** {mapping['technique_id']}: {mapping['technique_name']}\n"
+                detailed_analysis += f"- **Tactic:** [{mapping['tactic']}](https://attack.mitre.org/tactics/{mapping['tactic']})\n"
+                detailed_analysis += f"- **Technique:** [{mapping['technique_id']}: {mapping['technique_name']}](https://attack.mitre.org/techniques/{mapping['technique_id']})\n"
             detailed_analysis += "\n"
 
         if item["defensive_measures"]:
