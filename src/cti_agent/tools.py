@@ -179,16 +179,18 @@ def find_defensive_measures(cve_id: str) -> dict:
     """
     # This is a placeholder. A real implementation would use an LLM to find
     # defensive measures.
+    sigma_rule = '''
+title: Suspicious Process Creation
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4688
+    NewProcessName: '*\\powershell.exe'
+  condition: selection
+'''
     return {
-        "sigma": [
-            "title: Suspicious Process Creation",
-            "logsource:",
-            "  product: windows",
-            "  service: security",
-            "detection:",
-            "  selection:",
-            "    EventID: 4688",
-            "    NewProcessName: '*\\powershell.exe'",
-            "  condition: selection",
-        ]
+        "sigma": [sigma_rule]
     }
+

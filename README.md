@@ -6,6 +6,7 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 - **Automated SBOM Analysis**: Parses CycloneDX SBOMs (JSON/XML) to identify all software components.
 - **AI-Powered Vulnerability Enrichment**: Leverages the Gemini 2.5 Flash model to:
+  - Generate an AI-powered executive summary of the findings.
   - Dynamically construct accurate Common Platform Enumeration (CPE) strings for components.
   - Map vulnerabilities to MITRE ATT&CK® tactics and techniques to understand adversary behavior.
   - Identify the underlying software weaknesses by linking to the Common Weakness Enumeration (CWE™).

@@ -1,5 +1,6 @@
-"""Pydantic AI Agent for the CTI Agent."""
+# Pydantic AI Agent for the CTI Agent.
 import os
+import json
 from pydantic_ai import Agent
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from . import tools
@@ -22,10 +23,11 @@ agent = Agent(
     tools.correlate_with_cisa_kev,
     tools.get_cpe_for_component,
     tools.map_cve_to_attack,
-    tools.find_defensive_measures
+    tools.find_defensive_measures,
   ],
   system_prompt=system_prompt
 )
+
 
 def calculate_risk_score(vulnerability, kev_info, attack_mappings):
     """Calculates a risk score for a vulnerability."""
@@ -49,6 +51,7 @@ def calculate_risk_score(vulnerability, kev_info, attack_mappings):
 
     risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact)
     return risk_score
+
 
 async def run_analysis(sbom_file_path: str):
     """Runs the full analysis on an SBOM file."""
@@ -89,17 +92,30 @@ async def run_analysis(sbom_file_path: str):
     # Sort vulnerabilities by risk score
     enriched_vulnerabilities.sort(key=lambda x: x["risk_score"], reverse=True)
 
+    # Generate the summary with the LLM
+    summary_prompt = (
+        f"Based on the following vulnerability data, generate a 1-2 paragraph executive summary for a cybersecurity report. "
+        f"Highlight the total number of vulnerabilities, the number of actively exploited vulnerabilities (KEV), and the number of high-risk vulnerabilities. "
+        f"Conclude with a recommendation for prioritizing remediation efforts.\n\n"
+        f"Vulnerability Data: {json.dumps(enriched_vulnerabilities, indent=2, default=str)}"
+    )
+    summary_result = await agent.run(summary_prompt)
+    summary = summary_result.output
+
     # Generate the report
-    report = generate_markdown_report(enriched_vulnerabilities, sbom_file_path, len(components))
+    report = generate_markdown_report(enriched_vulnerabilities, sbom_file_path, len(components), summary)
     print(report)
 
-def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_components):
+
+def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_components, summary):
     """Generates a Markdown report from the analysis results."""
     report = """# Cyber Threat Intelligence Analysis Report
 
 **SBOM File:** `{sbom_file_path}`
 
 ## Executive Summary
+
+{summary}
 
 - **Total Components Scanned:** {total_components}
 - **Total Vulnerabilities Found:** {total_vulnerabilities}
@@ -150,6 +166,7 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
 
     return report.format(
         sbom_file_path=sbom_file_path,
+        summary=summary,
         total_components=total_components,
         total_vulnerabilities=total_vulnerabilities,
         kev_count=kev_count,

@@ -10,10 +10,10 @@ This checklist is generated from the Product Requirements Document (v3.0).
   - [ ] Modify the `RiskScore` algorithm in `src/cti_agent/agent.py` to incorporate the EPSS score as a weighting factor.
   - [ ] Update the detailed vulnerability section of the Markdown report to display the EPSS score.
 
-- [ ] **AI-Generated Summaries**
-  - [ ] Implement a new agent tool (`summarize_findings`) that uses the LLM to generate a 1-2 paragraph executive summary of the analysis results.
-  - [ ] Update the orchestration logic in `agent.py` to call this tool after all vulnerabilities have been analyzed.
-  - [ ] Add the generated summary to the top of the Markdown report.
+- [x] **AI-Generated Summaries**
+  - [x] Implement a new agent tool (`summarize_findings`) that uses the LLM to generate a 1-2 paragraph executive summary of the analysis results.
+  - [x] Update the orchestration logic in `agent.py` to call this tool after all vulnerabilities have been analyzed.
+  - [x] Add the generated summary to the top of the Markdown report.
 
 - [ ] **File-Based Reporting**
   - [ ] Create a `reports/` directory in the project root.
