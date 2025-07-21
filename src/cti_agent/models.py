@@ -28,6 +28,7 @@ class EnrichedVulnerability(BaseModel):
     kev_details: Optional[dict] = None
     attack_mappings: List[dict]
     defensive_measures: dict
+    epss_score: Optional[float] = None
 
 class AnalysisReport(BaseModel):
     """The top-level model that structures the final report."""

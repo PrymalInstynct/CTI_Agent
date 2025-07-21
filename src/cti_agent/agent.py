@@ -29,12 +29,13 @@ agent = Agent(
 )
 
 
-def calculate_risk_score(vulnerability, kev_info, attack_mappings):
+def calculate_risk_score(vulnerability, kev_info, attack_mappings, epss_score):
     """Calculates a risk score for a vulnerability."""
     # Weights for each factor
-    w_cvss = 0.4
+    w_cvss = 0.3
     w_kev = 0.4
-    w_attack = 0.2
+    w_attack = 0.1
+    w_epss = 0.2
 
     # CVSS Score
     cvss_score = vulnerability.cvss_score or 0.0
@@ -49,7 +50,10 @@ def calculate_risk_score(vulnerability, kev_info, attack_mappings):
         # more sophisticated mapping of tactics to impact.
         attack_impact = 5.0
 
-    risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact)
+    # EPSS Score
+    epss_score_value = epss_score or 0.0
+
+    risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact) + (w_epss * epss_score_value * 10)
     return risk_score
 
 
@@ -57,10 +61,9 @@ async def run_analysis(sbom_file_path: str):
     """Runs the full analysis on an SBOM file."""
     components = tools.parse_sbom(sbom_file_path)
     
-    enriched_vulnerabilities = []
+    all_vulnerabilities = []
     for component in components:
         if not component.cpe:
-            # Use the LLM to generate the CPE if it's missing
             cpe_prompt = (
                 f"Generate a CPE 2.3 string for the following software component. "
                 f"Provide only the CPE string and nothing else. "
@@ -71,23 +74,29 @@ async def run_analysis(sbom_file_path: str):
             component.cpe = cpe_result.output.strip()
 
         vulnerabilities = tools.query_nvd_for_cves(component.cpe)
-        cve_ids = [v.cve_id for v in vulnerabilities]
-        kev_info = tools.correlate_with_cisa_kev(cve_ids)
+        all_vulnerabilities.extend(vulnerabilities)
 
-        for vulnerability in vulnerabilities:
-            attack_mappings = tools.map_cve_to_attack(vulnerability.cve_id, vulnerability.description)
-            defensive_measures = tools.find_defensive_measures(vulnerability.cve_id)
-            risk_score = calculate_risk_score(vulnerability, kev_info, attack_mappings)
+    cve_ids = [v.cve_id for v in all_vulnerabilities]
+    kev_info = tools.correlate_with_cisa_kev(cve_ids)
+    epss_scores = tools.query_epss(cve_ids)
 
-            enriched_vulnerabilities.append(
-                {
-                    "vulnerability": vulnerability,
-                    "kev_info": kev_info.get(vulnerability.cve_id),
-                    "attack_mappings": attack_mappings,
-                    "defensive_measures": defensive_measures,
-                    "risk_score": risk_score,
-                }
-            )
+    enriched_vulnerabilities = []
+    for vulnerability in all_vulnerabilities:
+        attack_mappings = tools.map_cve_to_attack(vulnerability.cve_id, vulnerability.description)
+        defensive_measures = tools.find_defensive_measures(vulnerability.cve_id)
+        epss_score = epss_scores.get(vulnerability.cve_id)
+        risk_score = calculate_risk_score(vulnerability, kev_info, attack_mappings, epss_score)
+
+        enriched_vulnerabilities.append(
+            {
+                "vulnerability": vulnerability,
+                "kev_info": kev_info.get(vulnerability.cve_id),
+                "attack_mappings": attack_mappings,
+                "defensive_measures": defensive_measures,
+                "epss_score": epss_score,
+                "risk_score": risk_score,
+            }
+        )
 
     # Sort vulnerabilities by risk score
     enriched_vulnerabilities.sort(key=lambda x: x["risk_score"], reverse=True)
@@ -123,8 +132,8 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
 
 ## Prioritized Vulnerabilities
 
-| CVE ID | CVSS v3.1 Score | CISA KEV | Risk Score |
-| --- | --- | --- | --- |
+| CVE ID | CVSS v3.1 Score | CISA KEV | EPSS Score | Risk Score |
+| --- | --- | --- | --- | --- |
 {vulnerability_table}
 ## Detailed Vulnerability Analysis
 
@@ -138,14 +147,17 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
     for item in enriched_vulnerabilities:
         vulnerability = item["vulnerability"]
         kev_status = "Yes" if item["kev_info"] else "No"
-        vulnerability_table += f"| {vulnerability.cve_id} | {vulnerability.cvss_score} | {kev_status} | {item['risk_score']:.2f} |\n"
+        epss_score = f"{item['epss_score']:.2f}" if item['epss_score'] is not None else "N/A"
+        vulnerability_table += f"| {vulnerability.cve_id} | {vulnerability.cvss_score} | {kev_status} | {epss_score} | {item['risk_score']:.2f} |\n"
 
     detailed_analysis = ""
     for item in enriched_vulnerabilities:
         vulnerability = item["vulnerability"]
+        epss_score_str = f"{item['epss_score']:.2f}" if item['epss_score'] is not None else "N/A"
         detailed_analysis += f"### {vulnerability.cve_id}\n\n"
         detailed_analysis += f"**CVSS v3.1 Base Score:** {vulnerability.cvss_score}\n\n"
         detailed_analysis += f"**CISA KEV Status:** {'Actively Exploited' if item['kev_info'] else 'Not Listed'}\n\n"
+        detailed_analysis += f"**EPSS Score:** {epss_score_str}\n\n"
         detailed_analysis += f"**CWE:** {vulnerability.weaknesses[0] if vulnerability.weaknesses else 'N/A'}\n\n"
         detailed_analysis += f"**Description:** {vulnerability.description}\n"
 
@@ -173,3 +185,4 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
         vulnerability_table=vulnerability_table,
         detailed_analysis=detailed_analysis,
     )
+

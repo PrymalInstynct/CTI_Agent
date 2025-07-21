@@ -194,3 +194,25 @@ detection:
         "sigma": [sigma_rule]
     }
 
+def query_epss(cve_ids: list[str]) -> dict[str, float]:
+    """Queries the EPSS API for the exploit probability scores of a list of CVEs.
+
+    Args:
+        cve_ids: A list of CVE IDs to query for.
+
+    Returns:
+        A dictionary mapping CVE IDs to their EPSS scores.
+    """
+    if not cve_ids:
+        return {}
+
+    url = f"https://api.first.org/data/v1/epss?cve={','.join(cve_ids)}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("status") == "OK" and data.get("data"):
+            return {item["cve"]: float(item["epss"]) for item in data["data"]}
+    except requests.exceptions.RequestException as e:
+        print(f"Error querying EPSS API: {e}")
+    return {}

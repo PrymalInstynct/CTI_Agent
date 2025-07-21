@@ -176,5 +176,6 @@ python3 -m unittest tests/test_integration.py
 
 - [National Vulnerability Database (NVD)](https://nvd.nist.gov/)
 - [CISA Known Exploited Vulnerabilities (KEV) Catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
+- [Exploit Prediction Scoring System (EPSS)](https://www.first.org/epss/)
 - [MITRE ATT&CK®](https://attack.mitre.org/)
 - [Common Weakness Enumeration (CWE™)](https://cwe.mitre.org/)

@@ -4,11 +4,11 @@ This checklist is generated from the Product Requirements Document (v3.0).
 
 ## Phase 1: Core Feature Enhancements
 
-- [ ] **EPSS Integration**
-  - [ ] Add a new function/tool (`query_epss`) to fetch EPSS scores for CVEs from the FIRST.org API.
-  - [ ] Update the `EnrichedVulnerability` Pydantic model in `src/cti_agent/models.py` to include an `epss_score` field.
-  - [ ] Modify the `RiskScore` algorithm in `src/cti_agent/agent.py` to incorporate the EPSS score as a weighting factor.
-  - [ ] Update the detailed vulnerability section of the Markdown report to display the EPSS score.
+- [x] **EPSS Integration**
+  - [x] Add a new function/tool (`query_epss`) to fetch EPSS scores for CVEs from the FIRST.org API.
+  - [x] Update the `EnrichedVulnerability` Pydantic model in `src/cti_agent/models.py` to include an `epss_score` field.
+  - [x] Modify the `RiskScore` algorithm in `src/cti_agent/agent.py` to incorporate the EPSS score as a weighting factor.
+  - [x] Update the detailed vulnerability section of the Markdown report to display the EPSS score.
 
 - [x] **AI-Generated Summaries**
   - [x] Implement a new agent tool (`summarize_findings`) that uses the LLM to generate a 1-2 paragraph executive summary of the analysis results.
