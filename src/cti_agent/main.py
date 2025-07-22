@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", message="`additionalProperties` is not support
 async def main():
     """Main function to run the CTI Agent CLI."""
     parser = argparse.ArgumentParser(description="Cyber Threat Intelligence Agent")
-    parser.add_argument("--version", action="version", version="%(prog)s 2.0.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 3.0.0")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 

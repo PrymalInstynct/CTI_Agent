@@ -4,7 +4,7 @@ Version: 3.0
 
 Date: July 21, 2025
 
-Status: DRAFT
+Status: FINAL
 
 ## 1.0 Product Vision & Overview
 
@@ -165,7 +165,8 @@ This section details the specific functional capabilities that the Cyber Threat 
 - FR-3.6.2: Local Deployment: The project MUST provide clear instructions for deploying a local MongoDB instance using Docker.
 - FR-3.6.3: Connection Management: The Python application MUST connect to MongoDB using details from environment variables.
 - FR-3.6.4: SBOM Ingestion: The agent MUST store the raw SBOM content in MongoDB after parsing.
-- FR-3.6.5: SBOM Querying for Chatbot: The database integration MUST support the new interactive chat feature by enabling efficient querying of the stored SBOM data based on natural language questions translated into database queries by the LLM.
+- FR-3.6.5: SBOM Deduplication: The agent MUST prevent the storage of identical SBOMs. If an SBOM with the same content already exists in the database, it MUST be identified as a duplicate, and the existing data should be used for analysis instead of re-ingesting.
+- FR-3.6.6: SBOM Querying for Chatbot: The database integration MUST support the new interactive chat feature by enabling efficient querying of the stored SBOM data based on natural language questions translated into database queries by the LLM.
 
 ### 3.7 Data Model (MongoDB Document Structure)
 

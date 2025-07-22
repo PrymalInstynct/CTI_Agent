@@ -12,8 +12,10 @@ A command-line tool for comprehensive threat intelligence analysis of software a
   - Identify the underlying software weaknesses by linking to the Common Weakness Enumeration (CWE™).
   - Find and provide actionable defensive measures, including Sigma, Snort, and Yara rules.
 - **Real-World Threat Correlation**: Flags vulnerabilities present in the CISA Known Exploited Vulnerabilities (KEV) catalog, highlighting immediate threats.
-- **Intelligent Risk Prioritization**: Moves beyond simple CVSS scores by using a multi-factor algorithm to prioritize vulnerabilities based on severity, real-world exploitation, and potential impact.
-- **Persistent Analysis**: Stores every analyzed SBOM in a local MongoDB database for historical tracking and future analysis.
+- **Exploit Prediction Scoring System (EPSS) Integration**: Incorporates EPSS scores to prioritize vulnerabilities based on the probability of exploitation in the wild.
+- **Intelligent Risk Prioritization**: Moves beyond simple CVSS scores by using a multi-factor algorithm to prioritize vulnerabilities based on severity, real-world exploitation, predicted exploitability (EPSS), and potential impact.
+- **Persistent Analysis**: Stores every analyzed SBOM in a local MongoDB database for historical tracking and future analysis, with de-duplication to prevent redundant entries.
+- **Interactive Chat Mode**: Allows users to query stored SBOM and vulnerability data using natural language.
 
 ## Prerequisites
 
@@ -64,13 +66,19 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 - Analyze an SBOM:
 
     ```bash
-    cti-agent --sbom-file <path-to-your-sbom.json>
+    cti-agent analyze --sbom-file <path-to-your-sbom.json>
     ```
 
 - Update local threat intelligence data:
 
     ```bash
-    cti-agent --update-data
+    cti-agent update-data
+    ```
+
+- Start interactive chat mode:
+
+    ```bash
+    cti-agent chat
     ```
 
 ## Report Output
