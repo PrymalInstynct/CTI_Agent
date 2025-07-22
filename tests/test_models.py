@@ -68,7 +68,8 @@ def test_sbom_model():
         timestamp="2025-07-19T10:00:00Z",
         sbom_format="json",
         raw_content={'key': 'value'},
-        components_count=10
+        components_count=10,
+        content_hash="a_test_hash"
     )
     assert sbom.filename == "test.json"
     assert sbom.timestamp == "2025-07-19T10:00:00Z"

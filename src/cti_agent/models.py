@@ -29,6 +29,10 @@ class EnrichedVulnerability(BaseModel):
     attack_mappings: List[dict]
     defensive_measures: dict
     epss_score: Optional[float] = None
+    risk_score: Optional[float] = None
+
+    class Config:
+        collection_name = "enriched_vulnerabilities"
 
 class AnalysisReport(BaseModel):
     """The top-level model that structures the final report."""
@@ -42,6 +46,7 @@ class SBOM(BaseModel):
     sbom_format: str
     raw_content: dict
     components_count: int
+    content_hash: str
 
     class Config:
         collection_name = "sboms"

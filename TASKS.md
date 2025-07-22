@@ -24,21 +24,27 @@ This checklist is generated from the Product Requirements Document (v3.0).
 
 ## Phase 2: Interactive Chatbot Functionality
 
-- [ ] **CLI Command for Chat Mode**
-  - [ ] Add a new CLI command (e.g., `agent chat`) in `src/cti_agent/main.py` to initiate an interactive chat session.
+- [x] **CLI Command for Chat Mode**
+  - [x] Add a new CLI command (e.g., `agent chat`) in `src/cti_agent/main.py` to initiate an interactive chat session.
 
-- [ ] **Chatbot Agent & Tools**
-  - [ ] Define a new agent or modify the existing one to handle conversational queries.
-  - [ ] Implement a tool (`answer_user_query`) that takes a natural language question from the user.
-  - [ ] Inside the `answer_user_query` tool, implement the logic to:
-    - [ ] Use the LLM to parse the user's question and determine the query to be performed against the MongoDB database.
-    - [ ] Execute the query against the stored SBOM data.
-    - [ ] Use the LLM again to formulate a natural language response based on the query results.
+- [x] **Chatbot Agent & Tools**
+  - [x] Define a new agent or modify the existing one to handle conversational queries.
+  - [x] Implement a tool (`answer_user_query`) that takes a natural language question from the user.
+  - [x] Inside the `answer_user_query` tool, implement the logic to:
+    - [x] Use the LLM to parse the user's question and determine the query to be performed against the MongoDB database.
+    - [x] Execute the query against the stored SBOM data.
+    - [x] Use the LLM again to formulate a natural language response based on the query results.
 
-- [ ] **Database Query Logic**
-  - [ ] Enhance the database connection logic in `src/cti_agent/data_manager.py` to support the types of queries needed for the chatbot (e.g., finding components by name, listing vulnerabilities by severity).
+- [x] **Database Query Logic**
+  - [x] Enhance the database connection logic in `src/cti_agent/data_manager.py` to support the types of queries needed for the chatbot (e.g., finding components by name, listing vulnerabilities by severity).
 
-## Phase 3: Documentation & Testing
+## Phase 3: Advanced Querying & De-duplication
+
+- [ ] If there were a need to perform complex, dynamic queries or aggregations across these datasets (e.g., "find all MITRE ATT&CK techniques associated with CVEs that are also in CISA KEV and have a high EPSS score"), MongoDB's querying capabilities would be more powerful than flat file lookups.
+- [x] Ensure that the user cannot upload the exact same SBOM with the exact same content more then once to MongoDB.
+  - [x] If an attempt is made to upload a duplicate SBOM print that information to standard out along with pull the SBOM out of MongoDB for Cyber Threat Intel Analysis.
+
+## Phase 4: Documentation & Testing
 
 - [ ] **Update Documentation**
   - [ ] Update `README.md` to describe the new EPSS integration, the AI summaries, the file-based reporting, and the new `chat` mode.

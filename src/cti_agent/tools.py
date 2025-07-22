@@ -1,61 +1,12 @@
 """Agent tools for the CTI Agent."""
 import os
 import json
-import datetime
 import time
 import requests
-from cyclonedx.model.bom import Bom
-from .models import get_db, Component, SBOM, Vulnerability
+from .models import get_db, Component, Vulnerability
 
 
-def parse_sbom(sbom_file_path: str) -> list[Component]:
-    """Parses the input SBOM file to extract a list of software components.
 
-    Args:
-        sbom_file_path: The path to the SBOM file.
-
-    Returns:
-        A list of software components.
-    """
-    db = get_db()
-    with open(sbom_file_path, 'r') as f:
-        raw_content = f.read()
-
-    if sbom_file_path.endswith('.json'):
-        sbom_format = 'json'
-        bom = Bom.from_json(json.loads(raw_content))
-        raw_dict = json.loads(raw_content)
-    elif sbom_file_path.endswith('.xml'):
-        sbom_format = 'xml'
-        import xml.etree.ElementTree as ET
-        bom = Bom.from_xml(ET.fromstring(raw_content))
-        # Converting XML to JSON for storing in MongoDB
-        import xmltodict
-        raw_dict = xmltodict.parse(raw_content)
-    else:
-        raise ValueError("Unsupported SBOM file format. Please use JSON or XML.")
-
-    components = []
-    for component in bom.components:
-        components.append(
-            Component(
-                name=component.name,
-                version=component.version,
-                purl=str(component.purl) if component.purl else None,
-                cpe=component.cpe if component.cpe else None,
-            )
-        )
-
-    sbom_doc = SBOM(
-        filename=os.path.basename(sbom_file_path),
-        timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
-        sbom_format=sbom_format,
-        raw_content=raw_dict,
-        components_count=len(components),
-    )
-    db[SBOM.Config.collection_name].insert_one(sbom_doc.model_dump())
-
-    return components
 
 def query_nvd_for_cves(cpe_string: str) -> list[Vulnerability]:
     """Queries the NVD API using a CPE string to find all associated CVEs.
@@ -168,31 +119,62 @@ def map_cve_to_attack(cve_id: str, cve_description: str) -> list[dict]:
     ]
 
 
-def find_defensive_measures(cve_id: str) -> dict:
-    """Finds defensive measures for a CVE.
+async def find_defensive_measures(cve_id: str) -> dict:
+    """Finds defensive measures for a CVE using an LLM.
 
     Args:
         cve_id: The CVE ID.
 
     Returns:
-        A dictionary of defensive measures.
+        A dictionary of defensive measures (e.g., {"sigma": ["rule1", "rule2"]}).
     """
-    # This is a placeholder. A real implementation would use an LLM to find
-    # defensive measures.
-    sigma_rule = '''
-title: Suspicious Process Creation
-logsource:
-  product: windows
-  service: security
-detection:
-  selection:
-    EventID: 4688
-    NewProcessName: '*\\powershell.exe'
-  condition: selection
-'''
-    return {
-        "sigma": [sigma_rule]
-    }
+    # Temporarily hardcoding return value to isolate error
+    return {"sigma": ["hardcoded_sigma_rule"], "snort": [], "yara": []}
+
+def summarize_findings(enriched_vulnerabilities: list[dict]) -> str:
+    """Generates a high-level executive summary of the analysis findings.
+
+    Args:
+        enriched_vulnerabilities: A list of dictionaries, where each dictionary contains
+                                  details about an enriched vulnerability, including
+                                  its CVE ID, CVSS score, KEV status, EPSS score,
+                                  and other relevant information.
+
+    Returns:
+        A 1-2 paragraph executive summary of the findings.
+    """
+    # This function will be called by the agent with the full vulnerability data.
+    # The agent's prompt will then guide the LLM to generate the summary.
+    # This is a placeholder for the tool definition. The actual LLM call
+    # for summarization happens in agent.py.
+    return "Summary generation handled by the agent's prompt."
+
+async def answer_user_query(collection_name: str, query: dict, projection: dict = None) -> str:
+    """Executes a MongoDB query and returns the raw results as a JSON string.
+
+    Args:
+        collection_name: The name of the MongoDB collection to query.
+        query: The MongoDB query filter.
+        projection: An optional MongoDB projection to include/exclude fields.
+
+    Returns:
+        A JSON string representing the query results.
+    """
+    db = get_db()
+    try:
+        collection = db[collection_name]
+
+        # Default projection for sboms to avoid large token counts
+        if collection_name == "sboms" and projection is None:
+            projection = {"raw_content": 0}
+
+        results = list(collection.find(query, projection))
+        if results:
+            return json.dumps(results, default=str)
+        else:
+            return f"No results found in the '{collection_name}' collection for the given query."
+    except Exception as e:
+        return f"An error occurred while querying the database: {e}"
 
 def query_epss(cve_ids: list[str]) -> dict[str, float]:
     """Queries the EPSS API for the exploit probability scores of a list of CVEs.
