@@ -1,8 +1,8 @@
-# CTI Agent v3.0 Task Checklist
+# CTI Agent v4.0 Task Checklist
 
-This checklist is generated from the Product Requirements Document (v3.0).
+This checklist is generated from the Product Requirements Document (v4.0).
 
-## Phase 1: Core Feature Enhancements
+## Phase 1: Core Feature Enhancements (v3.0 - Completed)
 
 - [x] **EPSS Integration**
   - [x] Add a new function/tool (`query_epss`) to fetch EPSS scores for CVEs from the FIRST.org API.
@@ -22,7 +22,7 @@ This checklist is generated from the Product Requirements Document (v3.0).
   - [x] Ensure the application prints the path to the generated report file upon completion.
   - [x] Ensure hyperlinks to the correct CWE and MITRE ATT&CK TTPs are included in the report.
 
-## Phase 2: Interactive Chatbot Functionality
+## Phase 2: Interactive Chatbot Functionality (v3.0 - Completed)
 
 - [x] **CLI Command for Chat Mode**
   - [x] Add a new CLI command (e.g., `agent chat`) in `src/cti_agent/main.py` to initiate an interactive chat session.
@@ -38,12 +38,12 @@ This checklist is generated from the Product Requirements Document (v3.0).
 - [x] **Database Query Logic**
   - [x] Enhance the database connection logic in `src/cti_agent/data_manager.py` to support the types of queries needed for the chatbot (e.g., finding components by name, listing vulnerabilities by severity).
 
-## Phase 3: SBOM De-duplication
+## Phase 3: SBOM De-duplication (v3.0 - Completed)
 
 - [x] Ensure that the user cannot upload the exact same SBOM with the exact same content more then once to MongoDB.
   - [x] If an attempt is made to upload a duplicate SBOM print that information to standard out along with pull the SBOM out of MongoDB for Cyber Threat Intel Analysis.
 
-## Phase 4: Documentation & Testing
+## Phase 4: Documentation & Testing (v3.0 - Completed)
 
 - [x] **Update Documentation**
   - [x] Update `README.md` to describe the new EPSS integration, the AI summaries, the file-based reporting, and the new `chat` mode.
@@ -54,6 +54,44 @@ This checklist is generated from the Product Requirements Document (v3.0).
   - [x] Write unit tests for the `summarize_findings` tool (mocking the LLM call).
   - [x] Write unit tests for the `answer_user_query` tool and the database query logic it depends on.
   - [x] Write integration tests for the end-to-end chatbot functionality.
+
+## Phase 5: RAG and Enhanced Context (v4.0 - In Progress)
+
+- [ ] **Vector Store Setup**
+  - [ ] Choose a local vector store (e.g., ChromaDB, FAISS).
+  - [ ] Implement local deployment instructions for the chosen vector store.
+  - [ ] Integrate vector store connection management into the application.
+  - [ ] Update `CTI_Agent_PRD_v4.0.md` with details on the chosen vector store and its integration.
+
+- [ ] **NVD Web Scraping & Ingestion**
+  - [ ] Develop a tool (`scrape_nvd_cve_info`) to scrape detailed CVE information from NVD website.
+  - [ ] Implement logic to ingest scraped NVD data into the vector store.
+  - [ ] Update `EnrichedVulnerability` model to reference vector store for detailed CVE context.
+
+- [ ] **Enhanced Defensive Measures**
+  - [ ] Develop a tool (`search_defensive_measures`) to search the RAG vector store for defensive measures (Sigma, Snort, Yara, Mitigation/Remediation/Patching Instructions).
+  - [ ] Update `EnrichedVulnerability` model to store comprehensive defensive measures from RAG.
+  - [ ] Modify report generation to include these enhanced defensive measures.
+
+## Phase 6: Large SBOM Handling & LLM Optimization (v4.0 - In Progress)
+
+- [ ] **SBOM Chunking/Summarization**
+  - [ ] Implement logic to chunk large SBOMs to avoid LLM token limits.
+  - [ ] Develop strategies for summarizing SBOM components if chunking is insufficient.
+  - [ ] Update SBOM parsing and analysis orchestration to handle chunked/summarized SBOMs.
+
+- [ ] **LLM Integration with RAG**
+  - [ ] Modify existing LLM calls (e.g., CPE generation, summary generation) to leverage the RAG vector store for improved context.
+
+## Phase 7: Documentation & Testing (v4.0 - Ongoing)
+
+- [ ] **Update Documentation**
+  - [ ] Update `README.md` with new v4.0 features and vector store setup instructions.
+  - [ ] Update `CTI_Agent_PRD_v4.0.md` (already done, but ensure consistency).
+
+- [ ] **Unit & Integration Testing**
+  - [ ] Write unit tests for all new v4.0 features (vector store, scraping, enhanced defensive measures, SBOM chunking).
+  - [ ] Write integration tests for end-to-end RAG and large SBOM handling workflows.
 
 ## Previously Completed (v2.0)
 
@@ -72,7 +110,3 @@ This checklist is generated from the Product Requirements Document (v3.0).
 - [x] **Error Handling & Usability**
 - [x] **Unit & Integration Testing (v2.0)**
 - [x] **Code Quality**
-
-## Future Features
-
-- [ ] If there were a need to perform complex, dynamic queries or aggregations across these datasets (e.g., "find all MITRE ATT&CK techniques associated with CVEs that are also in CISA KEV and have a high EPSS score"), MongoDB's querying capabilities would be more powerful than flat file lookups.
