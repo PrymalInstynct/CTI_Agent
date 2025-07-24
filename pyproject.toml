@@ -11,6 +11,10 @@ dependencies = [
     "pymongo",
     "python-dotenv",
     "xmltodict",
+    "chromadb",
+    "beautifulsoup4",
+    "selenium",
+    "webdriver-manager",
 ]
 
 [project.scripts]

@@ -28,6 +28,7 @@ class EnrichedVulnerability(BaseModel):
     kev_details: Optional[dict] = None
     attack_mappings: List[dict]
     defensive_measures: dict
+    enhanced_defensive_measures: Optional[list[str]] = None
     epss_score: Optional[float] = None
     risk_score: Optional[float] = None
 

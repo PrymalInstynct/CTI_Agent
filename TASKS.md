@@ -57,16 +57,19 @@ This checklist is generated from the Product Requirements Document (v4.0).
 
 ## Phase 5: RAG and Enhanced Context (v4.0 - In Progress)
 
-- [ ] **Vector Store Setup**
-  - [ ] Choose a local vector store (e.g., ChromaDB, FAISS).
-  - [ ] Implement local deployment instructions for the chosen vector store.
-  - [ ] Integrate vector store connection management into the application.
-  - [ ] Update `CTI_Agent_PRD_v4.0.md` with details on the chosen vector store and its integration.
+- [x] **Vector Store Setup**
+  - [x] Choose a local vector store (e.g., ChromaDB, FAISS, supabase, Pinecone).
+  - [x] Implement local deployment instructions for the chosen vector store including it into the existing docker-compose.yml.
+  - [x] Integrate vector store connection management into the application.
+  - [x] Update `CTI_Agent_PRD_v4.0.md`, `README.md`, & `TASKS.md` with details on the chosen vector store and its integration.
 
 - [ ] **NVD Web Scraping & Ingestion**
   - [ ] Develop a tool (`scrape_nvd_cve_info`) to scrape detailed CVE information from NVD website.
+    - [ ] include the capability to follow and scrape the contents of those sites that are found assoicated with the CVE being researched.
+      - [ ] Never crawl more then 2 hops away from the NVD website.
   - [ ] Implement logic to ingest scraped NVD data into the vector store.
   - [ ] Update `EnrichedVulnerability` model to reference vector store for detailed CVE context.
+  - [ ] Update `CTI_Agent_PRD_v4.0.md`, `README.md`, & `TASKS.md` with details on the web scraping capabiltiy and its integration.
 
 - [ ] **Enhanced Defensive Measures**
   - [ ] Develop a tool (`search_defensive_measures`) to search the RAG vector store for defensive measures (Sigma, Snort, Yara, Mitigation/Remediation/Patching Instructions).

@@ -51,15 +51,15 @@ A command-line tool for comprehensive threat intelligence analysis of software a
     - `GEMINI_API_KEY`: Your Google Gemini API key.
     - `NVD_API_KEY`: Your NVD API key (from [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key)). This is highly recommended to avoid rate limiting and ensure reliable vulnerability lookups.
 
-## Database Setup (MongoDB)
+## Database and Vector Store Setup (MongoDB & ChromaDB)
 
-1. Start a local MongoDB instance using Docker Compose:
+1. Start local MongoDB and ChromaDB instances using Docker Compose:
 
     ```bash
     docker-compose up -d
     ```
 
-2. Update the `.env` file with your MongoDB connection details if they differ from the defaults.
+2. Update the `.env` file with your MongoDB and ChromaDB connection details if they differ from the defaults.
 
 ## Usage
 

@@ -11,10 +11,10 @@ import json
 
 # Configure the LLM
 # Define the master system prompt
-system_prompt = """You are an expert Cyber Threat Intelligence Analyst. 
-Your mission is to analyze a list of software components from a Software Bill of Materials (SBOM). 
-For each component, you will use the provided tools to find associated vulnerabilities (CVEs), enrich them with data from NVD, CISA KEV, CWE, and MITRE ATT&CK, and find defensive measures. 
-Your final output will be a structured, prioritized vulnerability report. 
+system_prompt = """You are an expert Cyber Threat Intelligence Analyst.
+Your mission is to analyze a list of software components from a Software Bill of Materials (SBOM).
+For each component, you will use the provided tools to find associated vulnerabilities (CVEs), enrich them with data from NVD, CISA KEV, CWE, and MITRE ATT&CK, and find defensive measures.
+Your final output will be a structured, prioritized vulnerability report.
 You must be precise, factual, and follow the instructions of each tool call exactly."""
 
 # Create the analysis agent
@@ -26,9 +26,17 @@ analysis_agent = Agent(
     tools.get_cpe_for_component,
     tools.map_cve_to_attack,
     tools.query_epss,
-    tools.summarize_findings,
+    tools.scrape_nvd_cve_info,
+    tools.search_defensive_measures,
   ],
   system_prompt=system_prompt
+)
+
+# Create the summary agent
+summary_agent = Agent(
+  'google-gla:gemini-2.5-flash',
+  tools=[],
+  system_prompt="""You are a helpful assistant that generates a high-level executive summary of a cybersecurity report based on the provided vulnerability data."""
 )
 
 # Create the chat agent
@@ -76,15 +84,10 @@ def calculate_risk_score(enriched_vulnerability: EnrichedVulnerability) -> float
     risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact) + (w_epss * epss_score_value * 10)
     return risk_score
 
-
-
-
-# ... existing code ...
-
 async def run_analysis(sbom_file_path: str):
     """Runs the full analysis on an SBOM file."""
     sbom_data, is_new_sbom = data_manager.load_and_store_sbom(sbom_file_path)
-    
+
     # Re-parse the SBOM content into a Bom object to extract components
     if sbom_file_path.endswith('.json'):
         bom = Bom.from_json(sbom_data)
@@ -104,7 +107,7 @@ async def run_analysis(sbom_file_path: str):
                 cpe=component.cpe if component.cpe else None,
             )
         )
-    
+
     all_vulnerabilities = []
     for component in components:
         if not component.cpe:
@@ -137,8 +140,12 @@ async def run_analysis(sbom_file_path: str):
     enriched_vulnerabilities = []
     for vulnerability in all_vulnerabilities:
         try:
+            # Scrape NVD for more details and populate the vector store
+            tools.scrape_nvd_cve_info(vulnerability.cve_id)
+
             attack_mappings = tools.map_cve_to_attack(vulnerability.cve_id, vulnerability.description)
             defensive_measures = await tools.find_defensive_measures(vulnerability.cve_id)
+            enhanced_defensive_measures = await tools.search_defensive_measures(vulnerability.cve_id)
             epss_score = epss_scores.get(vulnerability.cve_id)
 
             enriched_vulnerability = EnrichedVulnerability(
@@ -147,6 +154,7 @@ async def run_analysis(sbom_file_path: str):
                 kev_details=kev_info.get(vulnerability.cve_id),
                 attack_mappings=attack_mappings,
                 defensive_measures=defensive_measures,
+                enhanced_defensive_measures=enhanced_defensive_measures,
                 epss_score=epss_score,
             )
             enriched_vulnerability.risk_score = calculate_risk_score(enriched_vulnerability)
@@ -157,7 +165,7 @@ async def run_analysis(sbom_file_path: str):
             print(f"defensive_measures type: {type(defensive_measures)}")
             print(f"defensive_measures value: {defensive_measures}")
             raise e
-    
+
     db = get_db()
     # Convert Pydantic models to dictionaries for MongoDB insertion
     vulnerabilities_to_insert = [v.model_dump(by_alias=True) for v in enriched_vulnerabilities]
@@ -169,13 +177,24 @@ async def run_analysis(sbom_file_path: str):
     enriched_vulnerabilities.sort(key=lambda x: x.risk_score, reverse=True)
 
     # Generate the summary with the LLM
+    summary_data = [
+        {
+            "cve_id": v.vulnerability.cve_id,
+            "cvss_score": v.vulnerability.cvss_score,
+            "is_in_kev": v.is_in_kev,
+            "epss_score": v.epss_score,
+            "risk_score": v.risk_score,
+        }
+        for v in enriched_vulnerabilities
+    ]
+
     summary_prompt = (
         f"Based on the following vulnerability data, generate a 1-2 paragraph executive summary for a cybersecurity report. "
         f"Highlight the total number of vulnerabilities, the number of actively exploited vulnerabilities (KEV), and the number of high-risk vulnerabilities. "
         f"Conclude with a recommendation for prioritizing remediation efforts.\n\n"
-        f"Vulnerability Data: {json.dumps([v.model_dump() for v in enriched_vulnerabilities], indent=2, default=str)}"
+        f"Vulnerability Data: {json.dumps(summary_data, indent=2, default=str)}"
     )
-    summary_result = await analysis_agent.run(summary_prompt)
+    summary_result = await summary_agent.run(summary_prompt)
     summary = summary_result.output
 
     # Generate the report
@@ -242,6 +261,12 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
                     detailed_analysis += f"{rule}\n"
                 detailed_analysis += "```\n\n"
 
+        if item.enhanced_defensive_measures:
+            detailed_analysis += "**Enhanced Defensive Measures (from RAG):**\n\n"
+            for measure in item.enhanced_defensive_measures:
+                detailed_analysis += f"- {measure}\n"
+            detailed_analysis += "\n"
+
     formatted_report = report.format(
         sbom_file_path=sbom_file_path,
         summary=summary,
@@ -252,4 +277,3 @@ def generate_markdown_report(enriched_vulnerabilities, sbom_file_path, total_com
         detailed_analysis=detailed_analysis,
     )
     return formatted_report.strip() + "\n"
-

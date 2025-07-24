@@ -3,8 +3,12 @@ import os
 import json
 import time
 import requests
+import re
+from urllib.parse import urljoin
+from bs4 import BeautifulSoup
 from .models import get_db, Component, Vulnerability
-
+from pydantic_ai import Agent
+from .vector_store_manager import VectorStoreManager
 
 
 
@@ -82,7 +86,6 @@ def correlate_with_cisa_kev(cve_ids: list[str]) -> dict:
 
     return kev_info
 
-
 def get_cpe_for_component(component_name: str, component_version: str) -> str:
     """Generates a CPE 2.3 string for a component.
 
@@ -96,7 +99,6 @@ def get_cpe_for_component(component_name: str, component_version: str) -> str:
     # This is a simplified implementation. A real implementation would use a more
     # sophisticated method to generate the CPE string.
     return f"cpe:2.3:a:{component_name.lower().replace(' ', '_')}:{component_name.lower().replace(' ', '_')}:{component_version}:*:*:*:*:*:*:*"
-
 
 def map_cve_to_attack(cve_id: str, cve_description: str) -> list[dict]:
     """Maps a CVE to MITRE ATT&CK tactics and techniques.
@@ -198,3 +200,130 @@ def query_epss(cve_ids: list[str]) -> dict[str, float]:
     except requests.exceptions.RequestException as e:
         print(f"Error querying EPSS API: {e}")
     return {}
+
+def scrape_nvd_cve_info(cve_id: str) -> bool:
+    """Scrapes detailed information for a given CVE from NVD, follows relevant links,
+    and stores the aggregated content in the RAG vector store.
+
+    Args:
+        cve_id: The CVE ID to scrape.
+
+    Returns:
+        True if successful, False otherwise.
+    """
+    initial_url = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
+    visited_urls = set()
+    vector_store = VectorStoreManager()
+
+    try:
+        _crawl_links_recursively(initial_url, cve_id, vector_store, visited_urls, max_depth=2)
+        print(f"Successfully scraped and stored info for {cve_id} and its links.")
+        return True
+    except Exception as e:
+        print(f"An error occurred during the scraping process for {cve_id}: {e}")
+        return False
+
+def _crawl_links_recursively(url: str, cve_id: str, vector_store: VectorStoreManager, visited_urls: set, depth: int = 0, max_depth: int = 2):
+    """Recursively crawls links from a starting URL, scrapes content, and stores it.
+
+    Args:
+        url: The URL to crawl.
+        cve_id: The parent CVE ID for metadata.
+        vector_store: The VectorStoreManager instance.
+        visited_urls: A set of already visited URLs to avoid loops.
+        depth: The current crawling depth.
+        max_depth: The maximum allowed crawling depth.
+    """
+    if depth > max_depth or url in visited_urls:
+        return
+
+    visited_urls.add(url)
+    print(f"Crawling (Depth {depth}): {url}")
+
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Extract and store the text content of the current page
+        # Use the body tag to avoid including head content like scripts and styles
+        body_content = soup.body
+        if body_content:
+            document_text = ' '.join(body_content.get_text().split())
+            doc_id = f"{cve_id}_{url}"
+            vector_store.add_document(
+                document=document_text,
+                metadata={'source': url, 'cve_id': cve_id},
+                doc_id=doc_id
+            )
+
+        # Find all relevant links and crawl them
+        if depth < max_depth:
+            # This selector targets the "Hyperlinks" and "Additional Information" sections
+            # which are common places for external references.
+            reference_links = soup.find_all('a', href=True)
+            for link in reference_links:
+                href = link.get('href')
+                if href and href.startswith('http'):
+                    # Ensure the link is absolute
+                    absolute_url = urljoin(url, href)
+                    _crawl_links_recursively(absolute_url, cve_id, vector_store, visited_urls, depth + 1, max_depth)
+
+    except requests.exceptions.RequestException as e:
+        print(f"Could not retrieve or parse {url}: {e}")
+
+async def search_defensive_measures(cve_id: str):
+    """Searches the RAG vector store for defensive measures related to a CVE,
+    then uses an LLM to extract actionable advice.
+
+    Args:
+        cve_id: The CVE ID to search for.
+
+    Returns:
+        A list of defensive measures.
+    """
+    vector_store = VectorStoreManager()
+    # Search for the raw NVD content we stored earlier
+    results = vector_store.search(query=cve_id, n_results=1)
+    documents = results.get('documents', [])
+
+    if not documents or not documents[0]:
+        return ["No information found in the vector store for this CVE."]
+
+    # The document is the raw text scraped from the NVD page
+    nvd_text_content = documents[0][0]
+
+    # Create a dedicated agent to parse the NVD content
+    extraction_agent = Agent(
+      'google-gla:gemini-2.5-flash',
+      system_prompt="""You are an expert security analyst. Your task is to extract actionable defensive measures from the provided text, which is from an NVD vulnerability page.
+Focus on mitigation, remediation, and patching instructions. Present the information as a clear, concise list of single-sentence recommendations.
+Do NOT use any markdown formatting (e.g., no asterisks, dashes, or bullet points). Start each recommendation on a new line.
+If no specific measures are mentioned, state that clearly."""
+    )
+
+    prompt = f"""
+    Based on the following text from the NVD page for {cve_id}, please extract the key defensive measures.
+
+    NVD Content:
+    ---
+    {nvd_text_content}
+    ---
+
+    Extracted Defensive Measures:
+    """
+
+    response = await extraction_agent.run(prompt)
+
+    if response and response.output:
+        # Sanitize the output to remove any markdown and split into a list
+        lines = response.output.strip().split('\n')
+        # Remove any leading/trailing whitespace and list markers
+        sanitized_lines = [re.sub(r'^\s*[-*\s]*', '', line).strip() for line in lines]
+        # Filter out any empty lines that might result from the sanitization
+        return [line for line in sanitized_lines if line]
+    else:
+        return ["Could not extract defensive measures from the NVD content."]

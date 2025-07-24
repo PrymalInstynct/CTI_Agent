@@ -7,5 +7,14 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  chroma:
+    image: chromadb/chroma
+    container_name: cti-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/.chroma/index
+
 volumes:
   mongo-data:
+  chroma-data:

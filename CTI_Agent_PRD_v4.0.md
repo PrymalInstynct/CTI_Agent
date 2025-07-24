@@ -193,9 +193,9 @@ This section details the specific functional capabilities that the Cyber Threat 
 
 ### 3.8 Vector Store Integration
 
-- **FR-3.8.1: Vector Store Choice**: The agent MUST integrate with a local vector store (e.g., ChromaDB, FAISS) for RAG capabilities.
-- **FR-3.8.2: Local Deployment**: The project MUST provide clear instructions for deploying and initializing the local vector store.
-- **FR-3.8.3: Data Ingestion**: The agent MUST be able to ingest scraped NVD data and defensive measures into the vector store.
+- **FR-3.8.1: Vector Store Choice**: The agent MUST integrate with ChromaDB as its local vector store for RAG capabilities.
+- **FR-3.8.2: Local Deployment**: The project MUST provide clear instructions for deploying and initializing the local ChromaDB vector store. A `vector_store` directory will be created in the project root to store the database files.
+- **FR-3.8.3: Data Ingestion**: The agent MUST be able to ingest scraped NVD data and defensive measures into the ChromaDB vector store.
 - **FR-3.8.4: Vector Search**: The agent MUST be able to perform vector similarity searches to retrieve relevant context for LLM queries.
 
 ## 4.0 AI Agent Architecture
