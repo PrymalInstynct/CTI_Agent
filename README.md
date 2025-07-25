@@ -66,7 +66,7 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 - Analyze an SBOM:
 
     ```bash
-    cti-agent analyze --sbom-file <path-to-your-sbom.json>
+    cti-agent analyze --sbom-file <path-to-your-sbom.json> [--crawl-depth <depth>]
     ```
 
 - Update local threat intelligence data:
@@ -102,8 +102,11 @@ The report filename follows a convention like `report-<sbom_name>-<timestamp>.md
 |--.gitignore
 |-- README.md
 |-- pyproject.toml
+|-- docker-compose.yml
 |-- frameworks/
-| |--.gitkeep
+| |-- cisa_kev.json
+| |-- cwec_v4.14.xml
+| |-- enterprise-attack.json
 |-- reports/
 | |--.gitkeep
 |-- src/
@@ -114,5 +117,7 @@ The report filename follows a convention like `report-<sbom_name>-<timestamp>.md
 | | |-- tools.py
 | | |-- models.py
 | | |-- data_manager.py
+| | |-- vector_store_manager.py
 |-- tests/
+|-- vector_store/
 ```

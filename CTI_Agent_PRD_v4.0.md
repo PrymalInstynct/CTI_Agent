@@ -145,6 +145,7 @@ This section details the specific functional capabilities that the Cyber Threat 
 - FR-3.1.3: Output to File: The CLI MUST save its final analysis report as a well-formatted Markdown file to a `./reports/` directory. The filename should be derived from the input SBOM filename and a timestamp to ensure uniqueness (e.g., `report-log4j-sbom-20250721103000.md`). It will no longer print the full report to standard output, but will instead print the path to the generated report file.
 - FR-3.1.4: Error Handling: The application must maintain robust error handling for scenarios such as invalid file paths, missing API keys, malformed SBOMs, or API failures.
 - FR-3.1.5: Interactive Chat Mode: The CLI MUST include a new command, such as `agent chat`, that launches an interactive session. In this mode, the user can ask natural language questions, and the agent will query the MongoDB database to provide answers based on previously ingested SBOMs.
+- **FR-3.1.6: Configurable Crawl Depth**: The CLI MUST accept an optional `--crawl-depth` argument to allow users to specify the maximum recursion depth for the web scraper. The default value will be 2.
 
 ### 3.2 CycloneDX SBOM Parsing
 

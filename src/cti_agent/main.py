@@ -23,6 +23,7 @@ async def main():
     # Analyze SBOM command
     analyze_parser = subparsers.add_parser("analyze", help="Analyze a CycloneDX SBOM file.")
     analyze_parser.add_argument("--sbom-file", type=str, required=True, help="Path to the CycloneDX SBOM file for analysis.")
+    analyze_parser.add_argument("--crawl-depth", type=int, default=2, help="The maximum recursion depth for the web scraper.")
     analyze_parser.set_defaults(func=analyze_command)
 
     # Chat command
@@ -45,7 +46,7 @@ async def analyze_command(args):
         print(f"Error: SBOM file not found at {args.sbom_file}")
         return
     try:
-        report_content = await run_analysis(args.sbom_file)
+        report_content = await run_analysis(args.sbom_file, args.crawl_depth)
         
         # Implement file naming convention
         sbom_filename = os.path.basename(args.sbom_file)

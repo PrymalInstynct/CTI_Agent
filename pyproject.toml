@@ -15,6 +15,7 @@ dependencies = [
     "beautifulsoup4",
     "selenium",
     "webdriver-manager",
+    "pypdf2",
 ]
 
 [project.scripts]

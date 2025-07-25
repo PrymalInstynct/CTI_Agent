@@ -1,3 +1,4 @@
+
 """Agent tools for the CTI Agent."""
 import os
 import json
@@ -6,10 +7,11 @@ import requests
 import re
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
+from PyPDF2 import PdfReader
+from io import BytesIO
 from .models import get_db, Component, Vulnerability
 from pydantic_ai import Agent
 from .vector_store_manager import VectorStoreManager
-
 
 
 def query_nvd_for_cves(cpe_string: str) -> list[Vulnerability]:
@@ -201,12 +203,13 @@ def query_epss(cve_ids: list[str]) -> dict[str, float]:
         print(f"Error querying EPSS API: {e}")
     return {}
 
-def scrape_nvd_cve_info(cve_id: str) -> bool:
+def scrape_nvd_cve_info(cve_id: str, crawl_depth: int = 2) -> bool:
     """Scrapes detailed information for a given CVE from NVD, follows relevant links,
     and stores the aggregated content in the RAG vector store.
 
     Args:
         cve_id: The CVE ID to scrape.
+        crawl_depth: The maximum recursion depth for the web scraper.
 
     Returns:
         True if successful, False otherwise.
@@ -216,8 +219,8 @@ def scrape_nvd_cve_info(cve_id: str) -> bool:
     vector_store = VectorStoreManager()
 
     try:
-        _crawl_links_recursively(initial_url, cve_id, vector_store, visited_urls, max_depth=2)
-        print(f"Successfully scraped and stored info for {cve_id} and its links.")
+        _crawl_links_recursively(initial_url, cve_id, vector_store, visited_urls, max_depth=crawl_depth)
+        print(f"Successfully processed {cve_id} and its links.")
         return True
     except Exception as e:
         print(f"An error occurred during the scraping process for {cve_id}: {e}")
@@ -238,42 +241,72 @@ def _crawl_links_recursively(url: str, cve_id: str, vector_store: VectorStoreMan
         return
 
     visited_urls.add(url)
-    print(f"Crawling (Depth {depth}): {url}")
 
+    # --- Start of new logic ---
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
+        content_type = response.headers.get('content-type', '').lower()
+
+        # Always parse HTML to find links, even if the document is already ingested.
+        if 'text/html' not in content_type:
+            # If not HTML, we can't find more links, so respect the old logic.
+            # Check for existence and add if new.
+            doc_id = f"{cve_id}_{url}"
+            if not vector_store.document_exists(doc_id=doc_id):
+                print(f"Crawling non-HTML (Depth {depth}): {url}")
+                document_text = ''
+                if 'application/pdf' in content_type:
+                    with BytesIO(response.content) as pdf_file:
+                        reader = PdfReader(pdf_file)
+                        for page in reader.pages:
+                            document_text += page.extract_text() or ''
+                if document_text:
+                    vector_store.add_document(document=document_text, metadata={'source': url, 'cve_id': cve_id}, doc_id=doc_id)
+            else:
+                print(f"Skipping already ingested non-HTML: {url}")
+            return # Stop crawling this branch
+
+        # For HTML, parse it for links
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Extract and store the text content of the current page
-        # Use the body tag to avoid including head content like scripts and styles
-        body_content = soup.body
-        if body_content:
-            document_text = ' '.join(body_content.get_text().split())
-            doc_id = f"{cve_id}_{url}"
-            vector_store.add_document(
-                document=document_text,
-                metadata={'source': url, 'cve_id': cve_id},
-                doc_id=doc_id
-            )
+        # Check if the HTML document itself needs to be ingested
+        doc_id = f"{cve_id}_{url}"
+        if not vector_store.document_exists(doc_id=doc_id):
+            print(f"Crawling (Depth {depth}): {url}")
+            if soup.header:
+                soup.header.decompose()
+            if soup.footer:
+                soup.footer.decompose()
+            if soup.body:
+                document_text = ' '.join(soup.body.get_text().split())
+                if document_text:
+                    vector_store.add_document(document=document_text, metadata={'source': url, 'cve_id': cve_id}, doc_id=doc_id)
+        else:
+            print(f"Skipping already ingested URL: {url}")
 
-        # Find all relevant links and crawl them
+        # Regardless of ingestion, if depth allows, find and crawl links.
         if depth < max_depth:
-            # This selector targets the "Hyperlinks" and "Additional Information" sections
-            # which are common places for external references.
+            # Exclude links from header and footer
+            if soup.header:
+                soup.header.decompose()
+            if soup.footer:
+                soup.footer.decompose()
+
             reference_links = soup.find_all('a', href=True)
             for link in reference_links:
                 href = link.get('href')
                 if href and href.startswith('http'):
-                    # Ensure the link is absolute
                     absolute_url = urljoin(url, href)
                     _crawl_links_recursively(absolute_url, cve_id, vector_store, visited_urls, depth + 1, max_depth)
 
     except requests.exceptions.RequestException as e:
         print(f"Could not retrieve or parse {url}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred while processing {url}: {e}")
 
 async def search_defensive_measures(cve_id: str):
     """Searches the RAG vector store for defensive measures related to a CVE,
@@ -286,31 +319,47 @@ async def search_defensive_measures(cve_id: str):
         A list of defensive measures.
     """
     vector_store = VectorStoreManager()
-    # Search for the raw NVD content we stored earlier
-    results = vector_store.search(query=cve_id, n_results=1)
+    # Use a 'where' filter to get all documents for this CVE
+    results = vector_store.search(
+        query=f"defensive measures for {cve_id}",
+        n_results=10,  # Get more documents to ensure we have enough context
+        where={"cve_id": cve_id}
+    )
     documents = results.get('documents', [])
 
     if not documents or not documents[0]:
         return ["No information found in the vector store for this CVE."]
 
-    # The document is the raw text scraped from the NVD page
-    nvd_text_content = documents[0][0]
+    # Combine the text from all found documents
+    full_text_content = "\n\n---\n\n".join(documents[0])
 
     # Create a dedicated agent to parse the NVD content
     extraction_agent = Agent(
       'google-gla:gemini-2.5-flash',
-      system_prompt="""You are an expert security analyst. Your task is to extract actionable defensive measures from the provided text, which is from an NVD vulnerability page.
-Focus on mitigation, remediation, and patching instructions. Present the information as a clear, concise list of single-sentence recommendations.
+      system_prompt="""You are a senior security analyst. Your task is to extract actionable defensive measures from the provided text, which is from an NVD vulnerability page and related sources.
+Look for a variety of defensive measures, including:
+- Mitigation steps
+- Remediation guidance
+- Patching instructions
+- Vendor-specific advisories
+- General security best practices
+
+Present the information as a clear, concise list of single-sentence recommendations.
 Do NOT use any markdown formatting (e.g., no asterisks, dashes, or bullet points). Start each recommendation on a new line.
-If no specific measures are mentioned, state that clearly."""
+If no specific measures are mentioned, state that clearly.
+
+Example:
+- Apply the latest security patches from the vendor.
+- Implement a web application firewall (WAF) to protect against common web-based attacks.
+- Restrict network access to the affected systems."""
     )
 
     prompt = f"""
-    Based on the following text from the NVD page for {cve_id}, please extract the key defensive measures.
+    Based on the following text scraped for {cve_id}, please extract the key defensive measures.
 
-    NVD Content:
+    Scraped Content:
     ---
-    {nvd_text_content}
+    {full_text_content}
     ---
 
     Extracted Defensive Measures:
@@ -326,4 +375,4 @@ If no specific measures are mentioned, state that clearly."""
         # Filter out any empty lines that might result from the sanitization
         return [line for line in sanitized_lines if line]
     else:
-        return ["Could not extract defensive measures from the NVD content."]
+        return ["Could not extract defensive measures from the provided content."]

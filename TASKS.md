@@ -63,18 +63,23 @@ This checklist is generated from the Product Requirements Document (v4.0).
   - [x] Integrate vector store connection management into the application.
   - [x] Update `CTI_Agent_PRD_v4.0.md`, `README.md`, & `TASKS.md` with details on the chosen vector store and its integration.
 
-- [ ] **NVD Web Scraping & Ingestion**
-  - [ ] Develop a tool (`scrape_nvd_cve_info`) to scrape detailed CVE information from NVD website.
-    - [ ] include the capability to follow and scrape the contents of those sites that are found assoicated with the CVE being researched.
-      - [ ] Never crawl more then 2 hops away from the NVD website.
-  - [ ] Implement logic to ingest scraped NVD data into the vector store.
-  - [ ] Update `EnrichedVulnerability` model to reference vector store for detailed CVE context.
-  - [ ] Update `CTI_Agent_PRD_v4.0.md`, `README.md`, & `TASKS.md` with details on the web scraping capabiltiy and its integration.
+- [x] **NVD Web Scraping & Ingestion**
+  - [x] Develop a tool (`scrape_nvd_cve_info`) to scrape detailed CVE information from NVD website.
+    - [x] include the capability to follow and scrape the contents of those sites that are found assoicated with the CVE being researched.
+      - [x] Never crawl more then 2 hops away from the NVD website.
+  - [x] **Scraper Enhancements**
+    - [x] Add a `--crawl-depth` command-line argument to control the recursion depth of the web scraper.
+    - [x] Implement logic to ignore hyperlinks found in the `<header>` and `<footer>` sections of scraped webpages.
+    - [x] Reduce the web request timeout to 3 seconds to avoid long waits.
+    - [x] Implement a check to prevent re-scraping and re-ingesting URLs that already exist in the vector store for a given CVE.
+  - [x] Implement logic to ingest scraped NVD data into the vector store.
+  - [x] Update `EnrichedVulnerability` model to reference vector store for detailed CVE context.
+  - [x] Update `CTI_Agent_PRD_v4.0.md`, `README.md`, & `TASKS.md` with details on the web scraping capabiltiy and its integration.
 
-- [ ] **Enhanced Defensive Measures**
-  - [ ] Develop a tool (`search_defensive_measures`) to search the RAG vector store for defensive measures (Sigma, Snort, Yara, Mitigation/Remediation/Patching Instructions).
-  - [ ] Update `EnrichedVulnerability` model to store comprehensive defensive measures from RAG.
-  - [ ] Modify report generation to include these enhanced defensive measures.
+- [x] **Enhanced Defensive Measures**
+  - [x] Develop a tool (`search_defensive_measures`) to search the RAG vector store for defensive measures (Sigma, Snort, Yara, Mitigation/Remediation/Patching Instructions).
+  - [x] Update `EnrichedVulnerability` model to store comprehensive defensive measures from RAG.
+  - [x] Modify report generation to include these enhanced defensive measures.
 
 ## Phase 6: Large SBOM Handling & LLM Optimization (v4.0 - In Progress)
 

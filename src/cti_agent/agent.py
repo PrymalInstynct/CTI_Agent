@@ -84,7 +84,7 @@ def calculate_risk_score(enriched_vulnerability: EnrichedVulnerability) -> float
     risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact) + (w_epss * epss_score_value * 10)
     return risk_score
 
-async def run_analysis(sbom_file_path: str):
+async def run_analysis(sbom_file_path: str, crawl_depth: int = 2):
     """Runs the full analysis on an SBOM file."""
     sbom_data, is_new_sbom = data_manager.load_and_store_sbom(sbom_file_path)
 
@@ -141,7 +141,7 @@ async def run_analysis(sbom_file_path: str):
     for vulnerability in all_vulnerabilities:
         try:
             # Scrape NVD for more details and populate the vector store
-            tools.scrape_nvd_cve_info(vulnerability.cve_id)
+            tools.scrape_nvd_cve_info(vulnerability.cve_id, crawl_depth)
 
             attack_mappings = tools.map_cve_to_attack(vulnerability.cve_id, vulnerability.description)
             defensive_measures = await tools.find_defensive_measures(vulnerability.cve_id)
