@@ -21,6 +21,21 @@ class Vulnerability(BaseModel):
     cvss_score: float
     weaknesses: List[str]
 
+class SnortRule(BaseModel):
+    rule_content: str
+    description: str
+    source_url: Optional[str] = None
+
+class SigmaRule(BaseModel):
+    rule_content: str
+    description: str
+    source_url: Optional[str] = None
+
+class YaraRule(BaseModel):
+    rule_content: str
+    description: str
+    source_url: Optional[str] = None
+
 class EnrichedVulnerability(BaseModel):
     """A composite model that represents a fully analyzed vulnerability."""
     vulnerability: Vulnerability
@@ -29,6 +44,9 @@ class EnrichedVulnerability(BaseModel):
     attack_mappings: List[dict]
     defensive_measures: dict
     enhanced_defensive_measures: Optional[list[str]] = None
+    snort_rules: Optional[List[SnortRule]] = None
+    sigma_rules: Optional[List[SigmaRule]] = None
+    yara_rules: Optional[List[YaraRule]] = None
     epss_score: Optional[float] = None
     risk_score: Optional[float] = None
 

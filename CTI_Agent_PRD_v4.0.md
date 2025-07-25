@@ -161,7 +161,7 @@ This section details the specific functional capabilities that the Cyber Threat 
 
 - FR-3.4.1: AI-Driven CPE Construction: The agent MUST use an LLM to construct valid CPE strings for components where they are missing.
 - FR-3.4.2: Threat Contextualization (CWE & MITRE ATT&CK): The agent MUST use an LLM to map CVEs to CWEs and MITRE ATT&CK techniques.
-- FR-3.4.3: Defensive Measure Analysis: The agent MUST use an LLM to find relevant defensive measures (Sigma, Snort, Yara).
+    - FR-3.4.3: Defensive Measure Analysis: The agent MUST use an LLM to find relevant defensive measures, including Snort, Sigma, and Yara rules.
 - FR-3.4.4: AI-Generated Executive Summary: The agent MUST use the LLM at the end of the analysis to generate a 1-2 paragraph executive summary of the findings. This summary will be placed at the top of the Markdown report.
 - **FR-3.4.5: Enhanced Defensive Measures**: The agent MUST leverage LLMs and a RAG vector store to provide comprehensive defensive measures, including mitigation, remediation, and patching instructions.
 - **FR-3.4.6: Contextualized CVE Information**: The agent MUST use LLMs to scrape NVD for detailed CVE information and store it in a RAG vector store to provide richer context during analysis.
@@ -269,7 +269,7 @@ The table of external data sources will be updated to include EPSS.
 
 The `EnrichedVulnerability` model will be updated to include the EPSS score.
 
-- `EnrichedVulnerability`: Will now include `epss_score: Optional[float]`.
+- `EnrichedVulnerability`: Will now include `epss_score: Optional[float]`, `snort_rules: Optional[List[str]]`, `sigma_rules: Optional[List[str]]`, and `yara_rules: Optional[List[str]]`.
 
 ## 6.0 Non-Functional Requirements
 

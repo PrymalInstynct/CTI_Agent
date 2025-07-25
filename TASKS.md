@@ -81,17 +81,26 @@ This checklist is generated from the Product Requirements Document (v4.0).
   - [x] Update `EnrichedVulnerability` model to store comprehensive defensive measures from RAG.
   - [x] Modify report generation to include these enhanced defensive measures.
 
-## Phase 6: Large SBOM Handling & LLM Optimization (v4.0 - In Progress)
+## Phase 6: Large SBOM Handling & LLM Optimization (v4.0 - Completed)
 
-- [ ] **SBOM Chunking/Summarization**
-  - [ ] Implement logic to chunk large SBOMs to avoid LLM token limits.
+- [x] **SBOM Chunking/Summarization**
+  - [x] Implement logic to chunk large SBOMs to avoid LLM token limits.
   - [ ] Develop strategies for summarizing SBOM components if chunking is insufficient.
-  - [ ] Update SBOM parsing and analysis orchestration to handle chunked/summarized SBOMs.
+  - [x] Update SBOM parsing and analysis orchestration to handle chunked/summarized SBOMs.
 
-- [ ] **LLM Integration with RAG**
-  - [ ] Modify existing LLM calls (e.g., CPE generation, summary generation) to leverage the RAG vector store for improved context.
+- [x] **LLM Integration with RAG**
+  - [x] Modify existing LLM calls (e.g., CPE generation, summary generation) to leverage the RAG vector store for improved context.
 
-## Phase 7: Documentation & Testing (v4.0 - Ongoing)
+## Phase 7: Snort, Sigma, Yara
+
+- [x] Leverage the Vector Store and LLM to search the internet and identify and propose any Snort signatures that may be capable of detecting the vulnerability being exploited
+  - [x] Ensure any identified signatures are documented within the final report, and if none were found be clear about that in the report
+- [x] Leverage the Vector Store and LLM to search the internet and identify and propose any Sigma rules that may be capable of detecting the vulnerability being exploited
+  - [x] Ensure any identified rules are documented within the final report, and if none were found be clear about that in the report
+- [x] Leverage the Vector Store and LLM to search the internet and  identify and propose any Yara signatures that may be capable of detecting the vulnerability being exploited
+  - [x] Ensure any identified signatures are documented within the final report, and if none were found be clear about that in the report
+
+## Phase 8: Documentation & Testing (v4.0 - Ongoing)
 
 - [ ] **Update Documentation**
   - [ ] Update `README.md` with new v4.0 features and vector store setup instructions.

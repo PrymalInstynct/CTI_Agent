@@ -90,7 +90,7 @@ The agent generates a comprehensive Markdown report saved to the `reports/` dire
 - Detailed analysis for each high-priority vulnerability, including:
   - CVE ID, CVSS score, CISA KEV status, and EPSS score.
   - Hyperlinked CWE and MITRE ATT&CK mappings.
-  - Actionable defensive measures (Sigma, Snort, Yara rules).
+  - Actionable defensive measures (Sigma, Snort, Yara rules), with clear indication if none are found.
 
 The report filename follows a convention like `report-<sbom_name>-<timestamp>.md`.
 

@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from PyPDF2 import PdfReader
 from io import BytesIO
-from .models import get_db, Component, Vulnerability
+from .models import get_db, Component, Vulnerability, SnortRule, SigmaRule, YaraRule
 from pydantic_ai import Agent
 from .vector_store_manager import VectorStoreManager
 
@@ -308,71 +308,146 @@ def _crawl_links_recursively(url: str, cve_id: str, vector_store: VectorStoreMan
     except Exception as e:
         print(f"An unexpected error occurred while processing {url}: {e}")
 
-async def search_defensive_measures(cve_id: str):
+async def search_defensive_measures(cve_id: str) -> dict:
     """Searches the RAG vector store for defensive measures related to a CVE,
-    then uses an LLM to extract actionable advice.
+    then uses an LLM to extract actionable advice, including Snort, Sigma, and Yara rules.
 
     Args:
         cve_id: The CVE ID to search for.
 
     Returns:
-        A list of defensive measures.
+        A dictionary containing lists of enhanced_defensive_measures, snort_rules, sigma_rules, and yara_rules.
     """
     vector_store = VectorStoreManager()
-    # Use a 'where' filter to get all documents for this CVE
     results = vector_store.search(
         query=f"defensive measures for {cve_id}",
-        n_results=10,  # Get more documents to ensure we have enough context
+        n_results=10,
         where={"cve_id": cve_id}
     )
-    documents = results.get('documents', [])
+    documents = results.get("documents", [])
 
     if not documents or not documents[0]:
-        return ["No information found in the vector store for this CVE."]
+        return {
+            "enhanced_defensive_measures": ["No information found in the vector store for this CVE."],
+            "snort_rules": [],
+            "sigma_rules": [],
+            "yara_rules": []
+        }
 
-    # Combine the text from all found documents
     full_text_content = "\n\n---\n\n".join(documents[0])
 
-    # Create a dedicated agent to parse the NVD content
     extraction_agent = Agent(
       'google-gla:gemini-2.5-flash',
-      system_prompt="""You are a senior security analyst. Your task is to extract actionable defensive measures from the provided text, which is from an NVD vulnerability page and related sources.
-Look for a variety of defensive measures, including:
-- Mitigation steps
-- Remediation guidance
-- Patching instructions
-- Vendor-specific advisories
-- General security best practices
+      system_prompt="""You are a specialized AI Cybersecurity Analyst Agent. Your primary function is to assist in threat detection by finding relevant security rules for a given Common Vulnerability and Exposures (CVE) identifier. The CVE you receive has been identified from a Software Bill of Materials (SBOM), indicating a potential vulnerability within the user's software supply chain.
 
-Present the information as a clear, concise list of single-sentence recommendations.
-Do NOT use any markdown formatting (e.g., no asterisks, dashes, or bullet points). Start each recommendation on a new line.
-If no specific measures are mentioned, state that clearly.
+Your Mission:
 
-Example:
-- Apply the latest security patches from the vendor.
-- Implement a web application firewall (WAF) to protect against common web-based attacks.
-- Restrict network access to the affected systems."""
+For the provided CVE, you must search for and retrieve existing, publicly available detection logic. Specifically, you must find:
+
+    Snort Signatures: For network-based detection.
+    Sigma Rules: For log-based detection in SIEMs.
+    YARA Rules: For file-based or memory-based threat hunting.
+
+Instructions & Constraints:
+
+    Accuracy is critical. Prioritize rules from official repositories (e.g., Snort.org, SigmaHQ on GitHub, community Yara-Rules projects) and well-known security research blogs or threat intelligence providers.
+    Do NOT generate or create new rules. Your task is to find existing, published rules.
+    For each rule you find, you MUST provide the rule content itself, a brief, one-sentence description of the rule's purpose, and a direct URL to its source for verification.
+    If you cannot find any rules for a specific category, you must explicitly state that none were found.
+
+Output Format:
+
+You must structure your response as a JSON object with the following keys:
+- `enhanced_defensive_measures`: A list of general defensive measures (mitigation, remediation, patching, vendor advisories, best practices).
+- `snort_rules`: A list of objects, where each object represents a Snort rule and has the following keys:
+    - `rule_content`: The full Snort rule content as a string.
+    - `description`: A brief, one-sentence description of the rule's purpose.
+    - `source_url`: A direct URL to the rule's source.
+- `sigma_rules`: A list of objects, where each object represents a Sigma rule and has the following keys:
+    - `rule_content`: The full Sigma rule content as a string.
+    - `description`: A brief, one-sentence description of the rule's purpose.
+    - `source_url`: A direct URL to the rule's source.
+- `yara_rules`: A list of objects, where each object represents a Yara rule and has the following keys:
+    - `rule_content`: The full Yara rule content as a string.
+    - `description`: A brief, one-sentence description of the rule's purpose.
+    - `source_url`: A direct URL to the rule's source.
+
+If no specific measures or rules are found for a category, provide an empty list for that key.
+
+Example JSON output:
+```json
+{
+  "enhanced_defensive_measures": [
+    "Apply the latest security patches from the vendor.",
+    "Implement a web application firewall (WAF) to protect against common web-based attacks."
+  ],
+  "snort_rules": [
+    {
+      "rule_content": "alert tcp any any -> any any (msg:\"ET EXPLOIT Apache Struts2 S2-045 Remote Code Execution\"; flow:to_server,established; content:\"Content-Type|3a| %{\"; fast_pattern; classtype:web-application-attack; sid:2023900; rev:1;)",
+      "description": "Detects Apache Struts2 S2-045 remote code execution attempts.",
+      "source_url": "https://www.snort.org/rules/2023900"
+    }
+  ],
+  "sigma_rules": [
+    {
+      "rule_content": "title: Apache Struts2 S2-045 Remote Code Execution\nlogsource:\n  product: web\n  service: apache_struts2\ndetection:\n  selection:\n    c-type|contains: \"%{\n  condition: selection",
+      "description": "Detects Apache Struts2 S2-045 remote code execution attempts via web logs.",
+      "source_url": "https://github.com/SigmaHQ/sigma/blob/master/rules/web/web_apache_struts2_s2_045.yml"
+    }
+  ],
+  "yara_rules": [
+    {
+      "rule_content": "rule Apache_Struts2_S2_045 {\n  strings:\n    $s1 = \"Content-Type: %{\" ascii wide\n  condition:\n    $s1\n}",
+      "description": "Detects Apache Struts2 S2-045 payloads in files or memory.",
+      "source_url": "https://github.com/Yara-Rules/rules/blob/master/malware/apache_struts2_s2_045.yar"
+    }
+  ]
+}
+```"""
     )
 
     prompt = f"""
-    Based on the following text scraped for {cve_id}, please extract the key defensive measures.
+    Based on the following text scraped for {cve_id}, please extract the key defensive measures, Snort rules, Sigma rules, and Yara rules.
 
     Scraped Content:
     ---
     {full_text_content}
     ---
 
-    Extracted Defensive Measures:
+    Extracted Defensive Measures and Rules (JSON format):
     """
 
     response = await extraction_agent.run(prompt)
 
     if response and response.output:
-        # Sanitize the output to remove any markdown and split into a list
-        lines = response.output.strip().split('\n')
-        # Remove any leading/trailing whitespace and list markers
-        sanitized_lines = [re.sub(r'^\s*[-*\s]*', '', line).strip() for line in lines]
-        # Filter out any empty lines that might result from the sanitization
-        return [line for line in sanitized_lines if line]
+        try:
+            # Extract JSON string from the response, handling potential markdown code blocks
+            json_match = re.search(r"```json\n([\s\S]*?)\n```", response.output)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                json_str = response.output # Assume it's just the JSON if no code block
+
+            extracted_data = json.loads(json_str)
+            return {
+                "enhanced_defensive_measures": extracted_data.get("enhanced_defensive_measures", []),
+                "snort_rules": [SnortRule(**rule) for rule in extracted_data.get("snort_rules", [])],
+                "sigma_rules": [SigmaRule(**rule) for rule in extracted_data.get("sigma_rules", [])],
+                "yara_rules": [YaraRule(**rule) for rule in extracted_data.get("yara_rules", [])]
+            }
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON from LLM response: {e}")
+            print(f"LLM response: {response.output}")
+            return {
+                "enhanced_defensive_measures": ["Could not extract defensive measures from the provided content due to JSON parsing error."],
+                "snort_rules": [],
+                "sigma_rules": [],
+                "yara_rules": []
+            }
     else:
-        return ["Could not extract defensive measures from the provided content."]
+        return {
+            "enhanced_defensive_measures": ["Could not extract defensive measures from the provided content."],
+            "snort_rules": [],
+            "sigma_rules": [],
+            "yara_rules": []
+        }
