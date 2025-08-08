@@ -55,7 +55,7 @@ This checklist is generated from the Product Requirements Document (v4.0).
   - [x] Write unit tests for the `answer_user_query` tool and the database query logic it depends on.
   - [x] Write integration tests for the end-to-end chatbot functionality.
 
-## Phase 5: RAG and Enhanced Context (v4.0 - In Progress)
+## Phase 5: RAG and Enhanced Context (v4.0 - Completed)
 
 - [x] **Vector Store Setup**
   - [x] Choose a local vector store (e.g., ChromaDB, FAISS, supabase, Pinecone).
@@ -85,13 +85,13 @@ This checklist is generated from the Product Requirements Document (v4.0).
 
 - [x] **SBOM Chunking/Summarization**
   - [x] Implement logic to chunk large SBOMs to avoid LLM token limits.
-  - [ ] Develop strategies for summarizing SBOM components if chunking is insufficient.
+  - [x] Develop strategies for summarizing SBOM components if chunking is insufficient.
   - [x] Update SBOM parsing and analysis orchestration to handle chunked/summarized SBOMs.
 
 - [x] **LLM Integration with RAG**
   - [x] Modify existing LLM calls (e.g., CPE generation, summary generation) to leverage the RAG vector store for improved context.
 
-## Phase 7: Snort, Sigma, Yara
+## Phase 7: Snort, Sigma, Yara (Completed)
 
 - [x] Leverage the Vector Store and LLM to search the internet and identify and propose any Snort signatures that may be capable of detecting the vulnerability being exploited
   - [x] Ensure any identified signatures are documented within the final report, and if none were found be clear about that in the report
@@ -99,27 +99,45 @@ This checklist is generated from the Product Requirements Document (v4.0).
   - [x] Ensure any identified rules are documented within the final report, and if none were found be clear about that in the report
 - [x] Leverage the Vector Store and LLM to search the internet and  identify and propose any Yara signatures that may be capable of detecting the vulnerability being exploited
   - [x] Ensure any identified signatures are documented within the final report, and if none were found be clear about that in the report
-- [ ] **Refine `search_defensive_measures` output for consistency**
-  - [ ] Ensure the LLM consistently extracts and formats Snort, Sigma, and Yara rules from the scraped content.
-  - [ ] Improve the prompt for the `extraction_agent` in `search_defensive_measures` to guide the LLM more effectively.
+- [x] **Refine `search_defensive_measures` output for consistency**
+  - [x] Ensure the LLM consistently extracts and formats Snort, Sigma, and Yara rules from the scraped content.
+  - [x] Improve the prompt for the `extraction_agent` in `search_defensive_measures` to guide the LLM more effectively.
 
-## Phase 8: RAG Data Collection expansion
+## Phase 8: RAG Data Collection expansion (Completed)
 
-- [ ] Enable scraping of more then HTML into the RAG Vector store
-  - [ ] PDF
-  - [ ] Markdown
-  - [ ] JSON
-  - [ ] XML
+- [x] Enable scraping of more then HTML into the RAG Vector store
+  - [x] PDF
+  - [x] Markdown
+  - [x] JSON
+  - [x] XML
 
-## Phase 9: Documentation & Testing (v4.0 - Ongoing)
+## Phase 9: Deterministic Workflow & Enhanced Data Ingestion (Completed)
 
-- [ ] **Update Documentation**
-  - [ ] Update `README.md` with new v4.0 features and vector store setup instructions.
-  - [ ] Update `CTI_Agent_PRD_v4.0.md` (already done, but ensure consistency).
+- [x] **Transition to a Deterministic Workflow**
+  - [x] Implement a dedicated SBOM parser for entity extraction.
+  - [x] Create a deterministic query generation function.
+  - [x] Refactor the main agent logic to use the new four-step workflow.
+  - [x] Update the final prompt for synthesis.
 
-- [ ] **Unit & Integration Testing**
-  - [ ] Write unit tests for all new v4.0 features (vector store, scraping, enhanced defensive measures, SBOM chunking).
-  - [ ] Write integration tests for end-to-end RAG and large SBOM handling workflows.
+- [x] **Enhance Data Ingestion with Chunking and Metadata**
+  - [x] Implement rule-specific metadata parsers for Yara, Sigma, and Snort.
+  - [x] Integrate text chunking into the data loading process.
+  - [x] Add rich metadata to each document chunk.
+
+- [x] **Optimize Vector Search and LLM Configuration**
+  - [x] Switch to Max Marginal Relevance (MMR) search.
+  - [x] Adjust search parameters to `k=15` and `fetch_k=50`.
+  - [x] Configure the LLM for deterministic output by setting `temperature=0`.
+
+## Phase 10: Documentation & Testing (v4.0 - Completed)
+
+- [x] **Update Documentation**
+  - [x] Update `README.md` with new v4.0 features and vector store setup instructions.
+  - [x] Update `CTI_Agent_PRD_v4.0.md` (already done, but ensure consistency).
+
+- [x] **Unit & Integration Testing**
+  - [x] Write unit tests for all new v4.0 features (vector store, scraping, enhanced defensive measures, SBOM chunking).
+  - [x] Write integration tests for end-to-end RAG and large SBOM handling workflows.
 
 ## Previously Completed (v2.0)
 

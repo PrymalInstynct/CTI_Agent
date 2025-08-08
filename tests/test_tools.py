@@ -51,11 +51,47 @@ class TestTools(unittest.TestCase):
         self.assertIsInstance(attack_mappings, list)
         self.assertGreater(len(attack_mappings), 0)
 
-    async def test_find_defensive_measures(self):
-        defensive_measures = await find_defensive_measures("CVE-2021-44228")
-        self.assertIsInstance(defensive_measures, dict)
-        self.assertIn("sigma", defensive_measures)
+    @patch('src.cti_agent.tools.VectorStoreManager')
+    @patch('src.cti_agent.tools.Agent')
+    async def test_find_defensive_measures(self, MockAgent, MockVectorStoreManager):
+        mock_vector_store_instance = MockVectorStoreManager.return_value
+        mock_agent_instance = MockAgent.return_value
 
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(unittest.main())
+        # Mock search results from VectorStoreManager
+        mock_vector_store_instance.search.side_effect = [
+            # Snort results
+            {'documents': [["snort rule content 1", "snort rule content 2"]], 'metadatas': [[{}, {}]], 'ids': [["id1", "id2"]], 'distances': [[0.1, 0.2]]},
+            # Sigma results
+            {'documents': [["sigma rule content 1"]], 'metadatas': [[{}]], 'ids': [["id3"]], 'distances': [[0.3]]},
+            # Yara results
+            {'documents': [["yara rule content 1", "yara rule content 2", "yara rule content 3"]], 'metadatas': [[{}, {}, {}]], 'ids': [["id4", "id5", "id6"]], 'distances': [[0.4, 0.5, 0.6]]},
+        ]
+
+        # Mock LLM response for formatting
+        mock_agent_instance.run.return_value.output = "Formatted rules from LLM: Snort: ..., Sigma: ..., Yara: ..."
+
+        cve_id = "CVE-2023-1234"
+        defensive_measures = await find_defensive_measures(cve_id)
+
+        self.assertIsInstance(defensive_measures, dict)
+        self.assertIn("snort", defensive_measures)
+        self.assertIn("sigma", defensive_measures)
+        self.assertIn("yara", defensive_measures)
+        self.assertIn("formatted_output", defensive_measures)
+
+        self.assertEqual(defensive_measures["snort"], ["snort rule content 1", "snort rule content 2"])
+        self.assertEqual(defensive_measures["sigma"], ["sigma rule content 1"])
+        self.assertEqual(defensive_measures["yara"], ["yara rule content 1", "yara rule content 2", "yara rule content 3"])
+        self.assertEqual(defensive_measures["formatted_output"], "Formatted rules from LLM: Snort: ..., Sigma: ..., Yara: ...")
+
+        # Verify VectorStoreManager.search calls
+        mock_vector_store_instance.search.assert_any_call(query=f"Snort rules for {cve_id}", where={"rule_type": "snort", "cve_id": cve_id})
+        mock_vector_store_instance.search.assert_any_call(query=f"Sigma rules for {cve_id}", where={"rule_type": "sigma", "cve_id": cve_id})
+        mock_vector_store_instance.search.assert_any_call(query=f"Yara rules for {cve_id}", where={"rule_type": "yara", "cve_id": cve_id})
+
+        # Verify Agent.run call
+        MockAgent.assert_called_once_with(
+            'google-gla:gemini-2.5-flash',
+            system_prompt=unittest.mock.ANY # We don't need to assert the exact system prompt here
+        )
+        mock_agent_instance.run.assert_called_once()

@@ -4,18 +4,21 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 ## Features
 
-- **Automated SBOM Analysis**: Parses CycloneDX SBOMs (JSON/XML) to identify all software components.
-- **AI-Powered Vulnerability Enrichment**: Leverages the Gemini 2.5 Flash model to:
+- **Automated SBOM Analysis**: Parses CycloneDX SBOMs (JSON/XML) to identify all software components. Efficiently handles **large SBOMs** through intelligent chunking to avoid LLM token limits.
+- **AI-Powered Vulnerability Enrichment**: Leverages the Gemini 2.5 Flash model and **Retrieval Augmented Generation (RAG)** for enhanced context to:
   - Generate an AI-powered executive summary of the findings.
   - Dynamically construct accurate Common Platform Enumeration (CPE) strings for components.
   - Map vulnerabilities to MITRE ATT&CK® tactics and techniques to understand adversary behavior.
   - Identify the underlying software weaknesses by linking to the Common Weakness Enumeration (CWE™).
-  - Find and provide actionable defensive measures, including Sigma, Snort, and Yara rules.
+  - Find and provide **comprehensive and contextualized defensive measures**, including Sigma, Snort, and Yara rules, as well as mitigation, remediation, and patching instructions.
+  - Provide **richer CVE information** by scraping NVD and other relevant sources, storing details in a local vector store.
 - **Real-World Threat Correlation**: Flags vulnerabilities present in the CISA Known Exploited Vulnerabilities (KEV) catalog, highlighting immediate threats.
 - **Exploit Prediction Scoring System (EPSS) Integration**: Incorporates EPSS scores to prioritize vulnerabilities based on the probability of exploitation in the wild.
 - **Intelligent Risk Prioritization**: Moves beyond simple CVSS scores by using a multi-factor algorithm to prioritize vulnerabilities based on severity, real-world exploitation, predicted exploitability (EPSS), and potential impact.
 - **Persistent Analysis**: Stores every analyzed SBOM in a local MongoDB database for historical tracking and future analysis, with de-duplication to prevent redundant entries.
 - **Interactive Chat Mode**: Allows users to query stored SBOM and vulnerability data using natural language.
+- **Optimized Vector Search**: Utilizes **Max Marginal Relevance (MMR)** for vector store searches, ensuring diverse and relevant results.
+- **Deterministic Workflow**: Employs a refined, deterministic workflow for consistent and reliable analysis.
 
 ## Prerequisites
 

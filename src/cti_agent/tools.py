@@ -9,7 +9,8 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from PyPDF2 import PdfReader
 from io import BytesIO
-from .models import get_db, Component, Vulnerability, SnortRule, SigmaRule, YaraRule
+from .models import get_db, Component, Vulnerability, SnortRule, SigmaRule, YaraRule, SnortRuleMetadata, SigmaRuleMetadata, YaraRuleMetadata
+from . import rule_parsers
 from pydantic_ai import Agent
 from googlesearch import search
 from .vector_store_manager import VectorStoreManager
@@ -133,8 +134,54 @@ async def find_defensive_measures(cve_id: str) -> dict:
     Returns:
         A dictionary of defensive measures (e.g., {"sigma": ["rule1", "rule2"]}).
     """
-    # Temporarily hardcoding return value to isolate error
-    return {"sigma": ["hardcoded_sigma_rule"], "snort": [], "yara": []}
+    vector_store = VectorStoreManager()
+    
+    # Search for Snort rules
+    snort_results = vector_store.search(query=f"Snort rules for {cve_id}", where={"rule_type": "snort", "cve_id": cve_id})
+    snort_rules = [doc for doc in snort_results.get('documents', [])]
+
+    # Search for Sigma rules
+    sigma_results = vector_store.search(query=f"Sigma rules for {cve_id}", where={"rule_type": "sigma", "cve_id": cve_id})
+    sigma_rules = [doc for doc in sigma_results.get('documents', [])]
+
+    # Search for Yara rules
+    yara_results = vector_store.search(query=f"Yara rules for {cve_id}", where={"rule_type": "yara", "cve_id": cve_id})
+    yara_rules = [doc for doc in yara_results.get('documents', [])]
+
+    # Use an LLM to extract and format the rules consistently
+    extraction_agent = Agent(
+        'google-gla:gemini-2.5-flash',
+        system_prompt="""You are an expert in cybersecurity rules (Snort, Sigma, Yara).
+        Your task is to extract and format the provided rule content consistently.
+        For each rule type, present the rules clearly. If no rules are found for a type, state that.
+        """
+    )
+
+    prompt = f"""Extract and format the following defensive measures for CVE ID {cve_id}:
+
+Snort Rules:
+{snort_rules if snort_rules else "No Snort rules found."}
+
+Sigma Rules:
+{sigma_rules if sigma_rules else "No Sigma rules found."}
+
+Yara Rules:
+{yara_rules if yara_rules else "No Yara rules found."}
+
+Provide the output in a structured format, clearly separating each rule type.
+"""
+    
+    response = await extraction_agent.run(prompt)
+    
+    # The response from the LLM is an AgentRunResult object. We need its .output attribute.
+    formatted_rules = response.output
+
+    return {
+        "snort": snort_rules,
+        "sigma": sigma_rules,
+        "yara": yara_rules,
+        "formatted_output": formatted_rules
+    }
 
 def summarize_findings(enriched_vulnerabilities: list[dict]) -> str:
     """Generates a high-level executive summary of the analysis findings.
@@ -266,8 +313,10 @@ def _crawl_links_recursively(url: str, cve_id: str, vector_store: VectorStoreMan
                         reader = PdfReader(pdf_file)
                         for page in reader.pages:
                             document_text += page.extract_text() or ''
+                elif 'text/markdown' in content_type or 'application/json' in content_type or 'application/xml' in content_type or 'text/xml' in content_type:
+                    document_text = response.text
                 if document_text:
-                    vector_store.add_document(document=document_text, metadata={'source': url, 'cve_id': cve_id}, doc_id=doc_id)
+                    vector_store.add_document(document=document_text, metadata={'source': url, 'cve_id': cve_id, 'content_type': content_type}, doc_id=doc_id)
             else:
                 print(f"Skipping already ingested non-HTML: {url}")
             return # Stop crawling this branch
@@ -332,9 +381,22 @@ def _scrape_rules_from_github(cve_id: str, vector_store: VectorStoreManager):
                             response = requests.get(url, timeout=5)
                             response.raise_for_status()
                             rule_content = response.text
+                            metadata = {'source': url, 'cve_id': cve_id, 'rule_type': rule_type}
+                            if rule_type == "snort":
+                                rule_metadata = rule_parsers.parse_snort_rule_metadata(rule_content, cve_id=cve_id, source_url=url)
+                            elif rule_type == "sigma":
+                                rule_metadata = rule_parsers.parse_sigma_rule_metadata(rule_content, cve_id=cve_id, source_url=url)
+                            elif rule_type == "yara":
+                                rule_metadata = rule_parsers.parse_yara_rule_metadata(rule_content, cve_id=cve_id, source_url=url)
+                            else:
+                                rule_metadata = None
+
+                            if rule_metadata:
+                                metadata.update(rule_metadata.model_dump()) # Use model_dump() for Pydantic v2+
+                            
                             vector_store.add_document(
                                 document=rule_content,
-                                metadata={'source': url, 'cve_id': cve_id, 'rule_type': rule_type},
+                                metadata=metadata,
                                 doc_id=doc_id
                             )
                             print(f"Successfully scraped {rule_type} rule for {cve_id} from {url}")
@@ -346,194 +408,15 @@ def _scrape_rules_from_github(cve_id: str, vector_store: VectorStoreManager):
         
 
 
-async def search_defensive_measures(cve_id: str) -> dict:
-    """Searches the RAG vector store for defensive measures related to a CVE,
-    then uses an LLM to extract actionable advice, including Snort, Sigma, and Yara rules.
+async def search_vector_store(query: str) -> str:
+    """Searches the vector store for a given query.
 
     Args:
-        cve_id: The CVE ID to search for.
+        query: The query to search for.
 
     Returns:
-        A dictionary containing lists of enhanced_defensive_measures, snort_rules, sigma_rules, and yara_rules.
+        A string containing the search results.
     """
     vector_store = VectorStoreManager()
-    # Modify the query to specifically look for rule types
-    snort_results = vector_store.search(
-        query=f"Snort rules for {cve_id}",
-        n_results=5,
-        where={"$and": [{"cve_id": cve_id}, {"rule_type": "snort"}]},
-    )
-    sigma_results_cve = vector_store.search(
-        query=f"Sigma rules for {cve_id}",
-        n_results=5,
-        where={"cve_id": cve_id},
-    )
-    sigma_results_type = vector_store.search(
-        query=f"Sigma rules for {cve_id}",
-        n_results=5,
-        where={"rule_type": "sigma"},
-    )
-    sigma_results = {
-        "documents": [
-            sigma_results_cve.get("documents", [[]])[0] + sigma_results_type.get("documents", [[]])[0]
-        ]
-    }
-    yara_results_cve = vector_store.search(
-        query=f"Yara rules for {cve_id}",
-        n_results=5,
-        where={"cve_id": cve_id},
-    )
-    yara_results_type = vector_store.search(
-        query=f"Yara rules for {cve_id}",
-        n_results=5,
-        where={"rule_type": "yara"},
-    )
-    yara_results = {
-        "documents": [
-            yara_results_cve.get("documents", [[]])[0] + yara_results_type.get("documents", [[]])[0]
-        ]
-    }
-
-    # Combine documents from different rule types
-    all_documents = []
-    if snort_results.get("documents") and snort_results["documents"][0]:
-        all_documents.extend(snort_results["documents"][0])
-    if sigma_results.get("documents") and sigma_results["documents"][0]:
-        all_documents.extend(sigma_results["documents"][0])
-    if yara_results.get("documents") and yara_results["documents"][0]:
-        all_documents.extend(yara_results["documents"][0])
-
-    # Also search for general defensive measures
-    general_measures_results = vector_store.search(
-        query=f"general defensive measures for {cve_id}",
-        n_results=5,
-        where={"cve_id": cve_id}
-    )
-    if general_measures_results.get("documents") and general_measures_results["documents"][0]:
-        all_documents.extend(general_measures_results["documents"][0])
-
-    if not all_documents:
-        return {
-            "enhanced_defensive_measures": ["No information found in the vector store for this CVE."],
-            "snort_rules": [],
-            "sigma_rules": [],
-            "yara_rules": []
-        }
-
-    full_text_content = "\n\n---\n\n".join(all_documents)
-
-    extraction_agent = Agent(
-      'google-gla:gemini-2.5-flash',
-      system_prompt="""You are a specialized AI Cybersecurity Analyst Agent. Your primary function is to assist in threat detection by finding relevant security rules for a given Common Vulnerability and Exposures (CVE) identifier. The CVE you receive has been identified from a Software Bill of Materials (SBOM), indicating a potential vulnerability within the user's software supply chain.
-
-Your Mission:
-
-For the provided CVE, you must search for and retrieve existing, publicly available detection logic. Specifically, you must find:
-
-    Snort Signatures: For network-based detection.
-    Sigma Rules: For log-based detection in SIEMs.
-    YARA Rules: For file-based or memory-based threat hunting.
-
-Instructions & Constraints:
-
-    Accuracy is critical. Prioritize rules from official repositories (e.g., Snort.org, SigmaHQ on GitHub, community Yara-Rules projects) and well-known security research blogs or threat intelligence providers.
-    Do NOT generate or create new rules. Your task is to find existing, published rules.
-    For each rule you find, you MUST provide the rule content itself, a brief, one-sentence description of the rule's purpose, and a direct URL to its source for verification.
-    If you cannot find any rules for a specific category, you must explicitly state that none were found.
-
-Output Format:
-
-You must structure your response as a JSON object with the following keys:
-- `enhanced_defensive_measures`: A list of general defensive measures (mitigation, remediation, patching, vendor advisories, best practices).
-- `snort_rules`: A list of objects, where each object represents a Snort rule and has the following keys:
-    - `rule_content`: The full Snort rule content as a string.
-    - `description`: A brief, one-sentence description of the rule's purpose.
-    - `source_url`: A direct URL to the rule's source.
-- `sigma_rules`: A list of objects, where each object represents a Sigma rule and has the following keys:
-    - `rule_content`: The full Sigma rule content as a string.
-    - `description`: A brief, one-sentence description of the rule's purpose.
-    - `source_url`: A direct URL to the rule's source.
-- `yara_rules`: A list of objects, where each object represents a Yara rule and has the following keys:
-    - `rule_content`: The full Yara rule content as a string.
-    - `description`: A brief, one-sentence description of the rule's purpose.
-    - `source_url`: A direct URL to the rule's source.
-
-If no specific measures or rules are found for a category, provide an empty list for that key.
-
-Example JSON output:
-```json
-{
-  "enhanced_defensive_measures": [
-    "Apply the latest security patches from the vendor.",
-    "Implement a web application firewall (WAF) to protect against common web-based attacks."
-  ],
-  "snort_rules": [
-    {
-      "rule_content": "alert tcp any any -> any any (msg:\"ET EXPLOIT Apache Struts2 S2-045 Remote Code Execution\"; flow:to_server,established; content:\"Content-Type|3a| %{\"; fast_pattern; classtype:web-application-attack; sid:2023900; rev:1;)",
-      "description": "Detects Apache Struts2 S2-045 remote code execution attempts.",
-      "source_url": "https://www.snort.org/rules/2023900"
-    }
-  ],
-  "sigma_rules": [
-    {
-      "rule_content": "title: Apache Struts2 S2-045 Remote Code Execution\nlogsource:\n  product: web\n  service: apache_struts2\ndetection:\n  selection:\n    c-type|contains: \"%{\n  condition: selection",
-      "description": "Detects Apache Struts2 S2-045 remote code execution attempts via web logs.",
-      "source_url": "https://github.com/SigmaHQ/sigma/blob/master/rules/web/web_apache_struts2_s2_045.yml"
-    }
-  ],
-  "yara_rules": [
-    {
-      "rule_content": "rule Apache_Struts2_S2_045 {\n  strings:\n    $s1 = \"Content-Type: %{\" ascii wide\n  condition:\n    $s1\n}",
-      "description": "Detects Apache Struts2 S2-045 payloads in files or memory.",
-      "source_url": "https://github.com/Yara-Rules/rules/blob/master/malware/apache_struts2_s2_045.yar"
-    }
-  ]
-}
-```"""
-    )
-
-    prompt = f"""
-    Based on the following text scraped for {cve_id}, please extract the key defensive measures, Snort rules, Sigma rules, and Yara rules.
-
-    Scraped Content:
-    ---
-    {full_text_content}
-    ---
-
-    Extracted Defensive Measures and Rules (JSON format):
-    """
-
-    response = await extraction_agent.run(prompt)
-
-    if response and response.output:
-        try:
-            # Extract JSON string from the response, handling potential markdown code blocks
-            json_match = re.search(r"```json\n([\s\S]*?)\n```", response.output)
-            if json_match:
-                json_str = json_match.group(1)
-            else:
-                json_str = response.output # Assume it's just the JSON if no code block
-
-            extracted_data = json.loads(json_str)
-            return {
-                "enhanced_defensive_measures": extracted_data.get("enhanced_defensive_measures", []),
-                "snort_rules": [SnortRule(**rule) for rule in extracted_data.get("snort_rules", [])],
-                "sigma_rules": [SigmaRule(**rule) for rule in extracted_data.get("sigma_rules", [])],
-                "yara_rules": [YaraRule(**rule) for rule in extracted_data.get("yara_rules", [])]
-            }
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON from LLM response: {e}")
-            print(f"LLM response: {response.output}")
-            return {
-                "enhanced_defensive_measures": ["Could not extract defensive measures from the provided content due to JSON parsing error."],
-                "snort_rules": [],
-                "sigma_rules": [],
-                "yara_rules": []
-            }
-    else:
-        return {
-            "enhanced_defensive_measures": ["Could not extract defensive measures from the provided content."],
-            "snort_rules": [],
-            "sigma_rules": [],
-            "yara_rules": []
-        }
+    results = vector_store.search(query, k=15)
+    return "\n".join([res['document'] for res in results])

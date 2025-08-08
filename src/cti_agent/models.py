@@ -36,6 +36,22 @@ class YaraRule(BaseModel):
     description: str
     source_url: Optional[str] = None
 
+class RuleMetadata(BaseModel):
+    rule_type: str
+    cve_id: Optional[str] = None
+    component_name: Optional[str] = None
+    source_url: Optional[str] = None
+    description: Optional[str] = None
+
+class SnortRuleMetadata(RuleMetadata):
+    pass
+
+class SigmaRuleMetadata(RuleMetadata):
+    pass
+
+class YaraRuleMetadata(RuleMetadata):
+    pass
+
 class EnrichedVulnerability(BaseModel):
     """A composite model that represents a fully analyzed vulnerability."""
     vulnerability: Vulnerability
@@ -77,3 +93,9 @@ def get_db():
     mongo_db_name = os.getenv("MONGO_DB_NAME", "cti_agent_db")
     client = MongoClient(mongo_host, mongo_port)
     return client[mongo_db_name]
+
+class SbomEntities(BaseModel):
+    """A Pydantic model to hold structured data like packages, CPEs, and CVEs extracted from an SBOM."""
+    packages: List[Component]
+    cpes: List[str]
+    cves: List[str]

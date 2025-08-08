@@ -2,7 +2,7 @@
 
 Version: 4.0
 
-Date: July 22, 2025
+Date: August 8, 2025
 
 Status: DRAFT
 
@@ -35,6 +35,8 @@ The primary goal of the Cyber Threat Intelligence Agent is to transform the proc
 - **Improve LLM Context with RAG**: Implement Retrieval Augmented Generation (RAG) to provide LLMs with more relevant and up-to-date information, especially for defensive measures and CVE details.
 
 - **Handle Large SBOMs**: Ensure the agent can process large SBOMs without encountering token limit issues with LLMs.
+
+- **Transition to a Deterministic Workflow**: Move from a probabilistic autonomous agent to a deterministic, structured workflow to improve the accuracy and consistency of identifying Snort, Sigma, and Yara rules.
 
 ### 1.3 Target Audience
 
@@ -134,6 +136,10 @@ The following user stories describe the key tasks Alex needs to accomplish using
 
 - **US-18: Local Vector Store Deployment**: "As Alex, I want clear instructions and a simple command to set up a local vector store for RAG."
 
+- **US-19: Deterministic Rule Identification**: "As Alex, I want the agent to use a deterministic workflow to identify Snort, Sigma, and Yara rules, ensuring consistent and accurate results every time."
+
+- **US-20: Improved Search Relevance**: "As Alex, I want the agent to use an advanced search method like Max Marginal Relevance (MMR) to retrieve a diverse and relevant set of security rules from the vector store."
+
 ## 3.0 Functional Requirements: Core Features
 
 This section details the specific functional capabilities that the Cyber Threat Intelligence Agent must provide.
@@ -144,12 +150,15 @@ This section details the specific functional capabilities that the Cyber Threat 
 - FR-3.1.2: Pydantic AI Integration: The CLI will continue to be implemented using the Pydantic AI framework's `to_cli()` or `to_cli_sync()` methods.
 - FR-3.1.3: Output to File: The CLI MUST save its final analysis report as a well-formatted Markdown file to a `./reports/` directory. The filename should be derived from the input SBOM filename and a timestamp to ensure uniqueness (e.g., `report-log4j-sbom-20250721103000.md`). It will no longer print the full report to standard output, but will instead print the path to the generated report file.
 - FR-3.1.4: Error Handling: The application must maintain robust error handling for scenarios such as invalid file paths, missing API keys, malformed SBOMs, or API failures.
+
 - FR-3.1.5: Interactive Chat Mode: The CLI MUST include a new command, such as `agent chat`, that launches an interactive session. In this mode, the user can ask natural language questions, and the agent will query the MongoDB database to provide answers based on previously ingested SBOMs.
 - **FR-3.1.6: Configurable Crawl Depth**: The CLI MUST accept an optional `--crawl-depth` argument to allow users to specify the maximum recursion depth for the web scraper. The default value will be 2.
 
 ### 3.2 CycloneDX SBOM Parsing
 
-(No changes from v3.0)
+- **FR-3.2.1: Dedicated SBOM Parser**: The agent MUST use a dedicated SBOM parser to extract entities from the SBOM content.
+- **FR-3.2.2: Entity Extraction**: The parser MUST extract all component names, versions, CPEs, and any explicitly mentioned CVEs from the SBOM.
+- **FR-3.2.3: Structured Output**: The parser MUST return the extracted entities in a structured format, using the `SbomEntities` Pydantic model.
 
 ### 3.3 Multi-Source Vulnerability Correlation
 
@@ -159,13 +168,13 @@ This section details the specific functional capabilities that the Cyber Threat 
 
 ### 3.4 AI-Powered Analysis & Contextualization
 
-- FR-3.4.1: AI-Driven CPE Construction: The agent MUST use an LLM to construct valid CPE strings for components where they are missing.
-- FR-3.4.2: Threat Contextualization (CWE & MITRE ATT&CK): The agent MUST use an LLM to map CVEs to CWEs and MITRE ATT&CK techniques.
-    - FR-3.4.3: Defensive Measure Analysis: The agent MUST use an LLM to find relevant defensive measures, including Snort, Sigma, and Yara rules.
-- FR-3.4.4: AI-Generated Executive Summary: The agent MUST use the LLM at the end of the analysis to generate a 1-2 paragraph executive summary of the findings. This summary will be placed at the top of the Markdown report.
-- **FR-3.4.5: Enhanced Defensive Measures**: The agent MUST leverage LLMs and a RAG vector store to provide comprehensive defensive measures, including mitigation, remediation, and patching instructions.
-- **FR-3.4.6: Contextualized CVE Information**: The agent MUST use LLMs to scrape NVD for detailed CVE information and store it in a RAG vector store to provide richer context during analysis.
-- **FR-3.4.7: Large SBOM Handling**: The agent MUST implement strategies (e.g., chunking, summarization) to handle large SBOMs and associated vulnerability data to avoid LLM token limits.
+- **FR-3.4.1: Deterministic Workflow**: The agent MUST follow a deterministic, four-step workflow for analysis and report generation:
+    1.  **SBOM Parsing and Entity Extraction**: Extract entities from the SBOM using the dedicated parser.
+    2.  **Deterministic Query Generation**: Generate a list of precise search queries based on the extracted entities.
+    3.  **Vector Store Search**: Use the generated queries to search the vector store for relevant security rules and information.
+    4.  **Final Report Synthesis**: Use a final LLM call to synthesize the aggregated search results and the original SBOM into a comprehensive report.
+- **FR-3.4.2: Deterministic Query Generation**: The agent MUST programmatically generate a list of precise search queries from the extracted SBOM entities.
+- **FR-3.4.3: Final Report Synthesis**: The agent MUST use a final LLM call with a specific prompt to synthesize the aggregated search results and the original SBOM into a comprehensive report. The LLM temperature for this step MUST be set to `0` to ensure deterministic output.
 
 ### 3.5 Comprehensive Reporting
 
@@ -197,7 +206,14 @@ This section details the specific functional capabilities that the Cyber Threat 
 - **FR-3.8.1: Vector Store Choice**: The agent MUST integrate with ChromaDB as its local vector store for RAG capabilities.
 - **FR-3.8.2: Local Deployment**: The project MUST provide clear instructions for deploying and initializing the local ChromaDB vector store. A `vector_store` directory will be created in the project root to store the database files.
 - **FR-3.8.3: Data Ingestion**: The agent MUST be able to ingest scraped NVD data and defensive measures into the ChromaDB vector store.
-- **FR-3.8.4: Vector Search**: The agent MUST be able to perform vector similarity searches to retrieve relevant context for LLM queries.
+- **FR-3.8.4: Vector Search**: The agent MUST use Max Marginal Relevance (MMR) search to retrieve relevant context for LLM queries.
+- **FR-3.8.5: Search Parameters**: The MMR search MUST be configured with `k=15` and `fetch_k=50` to retrieve a diverse and relevant set of documents.
+
+### 3.9 Data Ingestion
+
+- **FR-3.9.1: Text Chunking**: The agent MUST use a text splitter to divide the content of rule files into smaller, overlapping chunks.
+- **FR-3.9.2: Metadata Enrichment**: The agent MUST enrich each document chunk with structured metadata, including `source`, `rule_type`, and rule-specific fields (e.g., `rule_name`, `cve`, `sid`).
+- **FR-3.9.3: Rule-Specific Parsers**: The agent MUST use dedicated parsers for Yara, Sigma, and Snort rules to extract metadata from the rule files.
 
 ## 4.0 AI Agent Architecture
 
@@ -216,6 +232,7 @@ The tool definitions will be expanded to support the new features.
 | **summarize_findings** | Takes all enriched vulnerability data and generates a high-level executive summary. | `enriched_vulnerabilities: List[dict]` | `summary_text: str` | "The analysis is complete. I need to create a summary for the report. I will call `summarize_findings` with the full list of vulnerabilities to generate a concise overview." |
 | **answer_user_query** | (For Chat Mode) Queries the MongoDB database based on a user's natural language question. | `user_question: str` | `answer_text: str` | "The user is in chat mode and asked 'Which components are from Apache?'. I need to translate this into a database query and return the answer. I will call `answer_user_query` with the user's question." |
 | **scrape_nvd_cve_info** | Scrapes detailed information for a given CVE from NVD and stores it in the RAG vector store. | `cve_id: str` | `success: bool` | "I need more detailed context for CVE-2023-1234. I will call `scrape_nvd_cve_info` to get the full NVD page content and store it." |
+| **extract_sbom_entities** | Extracts entities from an SBOM file. | `sbom_content: str` | `entities: SbomEntities` | "I need to extract the entities from this SBOM file to begin the analysis." |
 | **search_defensive_measures** | Searches the RAG vector store for defensive measures (Sigma, Snort, Yara, Mitigation/Remediation/Patching Instructions) related to a CVE. | `cve_id: str` | `defensive_measures: List[str]` | "I have identified a high-risk CVE. I need to find relevant defensive measures. I will call `search_defensive_measures` with the CVE ID." |
 | **handle_large_sbom_chunk** | Processes a chunk of a large SBOM to extract components and associated data, managing token limits. | `sbom_chunk: str` | `components: List[dict]` | "The SBOM is too large for a single LLM call. I will use `handle_large_sbom_chunk` to process it in smaller parts." |
 
@@ -223,20 +240,12 @@ The tool definitions will be expanded to support the new features.
 
 The workflow will be updated to include the new steps:
 
-1. Parse SBOM (potentially in chunks for large SBOMs).
-2. For each component:
-   - Get CPE if missing.
-   - Query NVD for CVEs.
-   - If CVEs are found:
-     - Correlate with CISA KEV.
-     - **Query EPSS for exploitability score.**
-     - Map to ATT&CK.
-     - **Scrape NVD for detailed CVE info and ingest into RAG vector store.**
-     - **Search RAG vector store for comprehensive defensive measures (Sigma, Snort, Yara, Mitigation/Remediation/Patching Instructions).**
-3. After all components are processed, aggregate the data.
-4. Apply the updated prioritization algorithm.
-5. **Call `summarize_findings` to generate the executive summary.**
-6. Synthesize all information into the final Markdown report and save it to a file.
+1.  **Call `extract_sbom_entities()` with the input SBOM.**
+2.  **Pass the resulting entities to a deterministic query generation function.**
+3.  **Iterate through the generated list of queries, calling the `search_vector_store` tool for each one.**
+4.  **Aggregate all the search results into a single, comprehensive context string.**
+5.  **Call `summarize_findings` to generate the executive summary.**
+6.  **Use a final LLM call to synthesize the aggregated search results and the original SBOM into a comprehensive report.**
 
 ### 4.4 AI-Driven Vulnerability Prioritization Algorithm
 
@@ -249,6 +258,10 @@ The workflow will be updated to include the new steps:
 
 The updated formula will be:
 `RiskScore = (W_cvss * CVSS) + (W_kev * KEV) + (W_epss * EPSS) + (W_attack * ATTACK)`
+
+### 4.5 LLM Configuration
+
+- **FR-4.5.1: Deterministic Output**: The LLM used for the final report synthesis step MUST be configured with a `temperature` of `0` to ensure deterministic and consistent output.
 
 ## 5.0 Data Management & Integration
 
@@ -270,6 +283,7 @@ The table of external data sources will be updated to include EPSS.
 The `EnrichedVulnerability` model will be updated to include the EPSS score.
 
 - `EnrichedVulnerability`: Will now include `epss_score: Optional[float]`, `snort_rules: Optional[List[str]]`, `sigma_rules: Optional[List[str]]`, and `yara_rules: Optional[List[str]]`.
+- `SbomEntities`: A new Pydantic model to hold structured data like packages, CPEs, and CVEs extracted from an SBOM.
 
 ## 6.0 Non-Functional Requirements
 
