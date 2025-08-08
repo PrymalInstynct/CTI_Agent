@@ -63,6 +63,12 @@ A command-line tool for comprehensive threat intelligence analysis of software a
 
 ## Usage
 
+- Source Python virtual environment
+
+```bash
+source .venv/bin/activate
+```
+
 - Analyze an SBOM:
 
     ```bash

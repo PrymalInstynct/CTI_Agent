@@ -11,6 +11,7 @@ from PyPDF2 import PdfReader
 from io import BytesIO
 from .models import get_db, Component, Vulnerability, SnortRule, SigmaRule, YaraRule
 from pydantic_ai import Agent
+from googlesearch import search
 from .vector_store_manager import VectorStoreManager
 
 
@@ -220,7 +221,8 @@ def scrape_nvd_cve_info(cve_id: str, crawl_depth: int = 2) -> bool:
 
     try:
         _crawl_links_recursively(initial_url, cve_id, vector_store, visited_urls, max_depth=crawl_depth)
-        print(f"Successfully processed {cve_id} and its links.")
+        _scrape_rules_from_github(cve_id, vector_store) # New call to scrape rules from GitHub
+        print(f"Successfully processed {cve_id} and its links and rules.")
         return True
     except Exception as e:
         print(f"An error occurred during the scraping process for {cve_id}: {e}")
@@ -285,8 +287,8 @@ def _crawl_links_recursively(url: str, cve_id: str, vector_store: VectorStoreMan
                 document_text = ' '.join(soup.body.get_text().split())
                 if document_text:
                     vector_store.add_document(document=document_text, metadata={'source': url, 'cve_id': cve_id}, doc_id=doc_id)
-        else:
-            print(f"Skipping already ingested URL: {url}")
+            else:
+                print(f"Skipping already ingested URL: {url}")
 
         # Regardless of ingestion, if depth allows, find and crawl links.
         if depth < max_depth:
@@ -308,6 +310,42 @@ def _crawl_links_recursively(url: str, cve_id: str, vector_store: VectorStoreMan
     except Exception as e:
         print(f"An unexpected error occurred while processing {url}: {e}")
 
+def _scrape_rules_from_github(cve_id: str, vector_store: VectorStoreManager):
+    """Scrapes Snort, Sigma, and Yara rules from GitHub repositories and stores them.
+    """
+    search_queries = {
+        "sigma": f"{cve_id} Sigma rules github",
+        "yara": f"{cve_id} Yara rules github",
+        "snort": f"{cve_id} Snort rules"
+    }
+
+    for rule_type, query in search_queries.items():
+        print(f"Searching for {rule_type} rules for {cve_id} with query: {query}")
+        search_results = search(query, num=5, stop=5, pause=2)
+        if search_results:
+            for result in search_results:
+                url = result
+                if url and ("github.com" in url or "snort.org" in url): # Basic filtering
+                    doc_id = f"{cve_id}_{rule_type}_{url}"
+                    if not vector_store.document_exists(doc_id=doc_id):
+                        try:
+                            response = requests.get(url, timeout=5)
+                            response.raise_for_status()
+                            rule_content = response.text
+                            vector_store.add_document(
+                                document=rule_content,
+                                metadata={'source': url, 'cve_id': cve_id, 'rule_type': rule_type},
+                                doc_id=doc_id
+                            )
+                            print(f"Successfully scraped {rule_type} rule for {cve_id} from {url}")
+                        except requests.exceptions.RequestException as e:
+                            print(f"Could not retrieve {rule_type} rule from {url}: {e}")
+                    else:
+                        print(f"Skipping already ingested {rule_type} rule: {url}")
+        
+        
+
+
 async def search_defensive_measures(cve_id: str) -> dict:
     """Searches the RAG vector store for defensive measures related to a CVE,
     then uses an LLM to extract actionable advice, including Snort, Sigma, and Yara rules.
@@ -319,14 +357,62 @@ async def search_defensive_measures(cve_id: str) -> dict:
         A dictionary containing lists of enhanced_defensive_measures, snort_rules, sigma_rules, and yara_rules.
     """
     vector_store = VectorStoreManager()
-    results = vector_store.search(
-        query=f"defensive measures for {cve_id}",
-        n_results=10,
+    # Modify the query to specifically look for rule types
+    snort_results = vector_store.search(
+        query=f"Snort rules for {cve_id}",
+        n_results=5,
+        where={"$and": [{"cve_id": cve_id}, {"rule_type": "snort"}]},
+    )
+    sigma_results_cve = vector_store.search(
+        query=f"Sigma rules for {cve_id}",
+        n_results=5,
+        where={"cve_id": cve_id},
+    )
+    sigma_results_type = vector_store.search(
+        query=f"Sigma rules for {cve_id}",
+        n_results=5,
+        where={"rule_type": "sigma"},
+    )
+    sigma_results = {
+        "documents": [
+            sigma_results_cve.get("documents", [[]])[0] + sigma_results_type.get("documents", [[]])[0]
+        ]
+    }
+    yara_results_cve = vector_store.search(
+        query=f"Yara rules for {cve_id}",
+        n_results=5,
+        where={"cve_id": cve_id},
+    )
+    yara_results_type = vector_store.search(
+        query=f"Yara rules for {cve_id}",
+        n_results=5,
+        where={"rule_type": "yara"},
+    )
+    yara_results = {
+        "documents": [
+            yara_results_cve.get("documents", [[]])[0] + yara_results_type.get("documents", [[]])[0]
+        ]
+    }
+
+    # Combine documents from different rule types
+    all_documents = []
+    if snort_results.get("documents") and snort_results["documents"][0]:
+        all_documents.extend(snort_results["documents"][0])
+    if sigma_results.get("documents") and sigma_results["documents"][0]:
+        all_documents.extend(sigma_results["documents"][0])
+    if yara_results.get("documents") and yara_results["documents"][0]:
+        all_documents.extend(yara_results["documents"][0])
+
+    # Also search for general defensive measures
+    general_measures_results = vector_store.search(
+        query=f"general defensive measures for {cve_id}",
+        n_results=5,
         where={"cve_id": cve_id}
     )
-    documents = results.get("documents", [])
+    if general_measures_results.get("documents") and general_measures_results["documents"][0]:
+        all_documents.extend(general_measures_results["documents"][0])
 
-    if not documents or not documents[0]:
+    if not all_documents:
         return {
             "enhanced_defensive_measures": ["No information found in the vector store for this CVE."],
             "snort_rules": [],
@@ -334,7 +420,7 @@ async def search_defensive_measures(cve_id: str) -> dict:
             "yara_rules": []
         }
 
-    full_text_content = "\n\n---\n\n".join(documents[0])
+    full_text_content = "\n\n---\n\n".join(all_documents)
 
     extraction_agent = Agent(
       'google-gla:gemini-2.5-flash',

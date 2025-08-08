@@ -99,8 +99,19 @@ This checklist is generated from the Product Requirements Document (v4.0).
   - [x] Ensure any identified rules are documented within the final report, and if none were found be clear about that in the report
 - [x] Leverage the Vector Store and LLM to search the internet and  identify and propose any Yara signatures that may be capable of detecting the vulnerability being exploited
   - [x] Ensure any identified signatures are documented within the final report, and if none were found be clear about that in the report
+- [ ] **Refine `search_defensive_measures` output for consistency**
+  - [ ] Ensure the LLM consistently extracts and formats Snort, Sigma, and Yara rules from the scraped content.
+  - [ ] Improve the prompt for the `extraction_agent` in `search_defensive_measures` to guide the LLM more effectively.
 
-## Phase 8: Documentation & Testing (v4.0 - Ongoing)
+## Phase 8: RAG Data Collection expansion
+
+- [ ] Enable scraping of more then HTML into the RAG Vector store
+  - [ ] PDF
+  - [ ] Markdown
+  - [ ] JSON
+  - [ ] XML
+
+## Phase 9: Documentation & Testing (v4.0 - Ongoing)
 
 - [ ] **Update Documentation**
   - [ ] Update `README.md` with new v4.0 features and vector store setup instructions.
