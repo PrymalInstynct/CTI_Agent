@@ -126,62 +126,36 @@ def map_cve_to_attack(cve_id: str, cve_description: str) -> list[dict]:
 
 
 async def find_defensive_measures(cve_id: str) -> dict:
-    """Finds defensive measures for a CVE using an LLM.
+    """Finds defensive measures for a CVE, prioritizing attributed rules.
 
     Args:
         cve_id: The CVE ID.
 
     Returns:
-        A dictionary of defensive measures (e.g., {"sigma": ["rule1", "rule2"]}).
+        A dictionary of defensive measures.
     """
     vector_store = VectorStoreManager()
-    
-    # Search for Snort rules
-    snort_results = vector_store.search(query=f"Snort rules for {cve_id}", where={"rule_type": "snort", "cve_id": cve_id})
-    snort_rules = [doc for doc in snort_results.get('documents', [])]
+    defensive_measures = {}
 
-    # Search for Sigma rules
-    sigma_results = vector_store.search(query=f"Sigma rules for {cve_id}", where={"rule_type": "sigma", "cve_id": cve_id})
-    sigma_rules = [doc for doc in sigma_results.get('documents', [])]
+    for rule_type in ["snort", "sigma", "yara"]:
+        # First, search for attributed rules
+        attributed_results = vector_store.search(
+            query=f"{rule_type.title()} rules for {cve_id}",
+            where={"rule_type": rule_type, "cve_id": cve_id, "source": {"$ne": "Custom-generated"}}
+        )
 
-    # Search for Yara rules
-    yara_results = vector_store.search(query=f"Yara rules for {cve_id}", where={"rule_type": "yara", "cve_id": cve_id})
-    yara_rules = [doc for doc in yara_results.get('documents', [])]
+        rules = []
+        if attributed_results:
+            for res in attributed_results:
+                rule__info = {
+                    "rule": res.get('document'),
+                    "source": res.get('metadata', {}).get('source')
+                }
+                rules.append(rule_info)
+        
+        defensive_measures[rule_type] = rules
 
-    # Use an LLM to extract and format the rules consistently
-    extraction_agent = Agent(
-        'google-gla:gemini-2.5-flash',
-        system_prompt="""You are an expert in cybersecurity rules (Snort, Sigma, Yara).
-        Your task is to extract and format the provided rule content consistently.
-        For each rule type, present the rules clearly. If no rules are found for a type, state that.
-        """
-    )
-
-    prompt = f"""Extract and format the following defensive measures for CVE ID {cve_id}:
-
-Snort Rules:
-{snort_rules if snort_rules else "No Snort rules found."}
-
-Sigma Rules:
-{sigma_rules if sigma_rules else "No Sigma rules found."}
-
-Yara Rules:
-{yara_rules if yara_rules else "No Yara rules found."}
-
-Provide the output in a structured format, clearly separating each rule type.
-"""
-    
-    response = await extraction_agent.run(prompt)
-    
-    # The response from the LLM is an AgentRunResult object. We need its .output attribute.
-    formatted_rules = response.output
-
-    return {
-        "snort": snort_rules,
-        "sigma": sigma_rules,
-        "yara": yara_rules,
-        "formatted_output": formatted_rules
-    }
+    return defensive_measures
 
 def summarize_findings(enriched_vulnerabilities: list[dict]) -> str:
     """Generates a high-level executive summary of the analysis findings.

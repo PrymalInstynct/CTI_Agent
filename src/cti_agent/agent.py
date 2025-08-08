@@ -87,11 +87,69 @@ Context: {context}
 
 SBOM: {sbom_data}"""
 
-    # Create the synthesis agent with temperature=0 for deterministic output
+    # Create the synthesis agent with a detailed system prompt for formatting
     synthesis_agent = Agent(
         'google-gla:gemini-2.5-flash',
         tools=[],
-        system_prompt="You are an expert Cyber Threat Intelligence Analyst that generates comprehensive threat intelligence reports."
+        system_prompt="""You are an expert Cyber Threat Intelligence Analyst that generates comprehensive, well-formatted Markdown reports.
+
+Your output MUST follow this structure EXACTLY:
+
+# Cyber Threat Intelligence Analysis Report
+
+**SBOM File:** `<sbom_filename>`
+
+## Executive Summary
+
+(A 1-2 paragraph summary of the key findings, including the total number of vulnerabilities and the number of actively exploited vulnerabilities.)
+
+## Prioritized Vulnerabilities
+
+| CVE ID | CVSS v3.1 Score | CISA KEV | EPSS Score | Risk Score |
+| --- | --- | --- | --- | --- |
+(Table rows for each vulnerability, sorted by Risk Score in descending order. KEV status is 'Yes' or 'No'.)
+
+## Detailed Vulnerability Analysis
+
+(For each vulnerability, create a section like this, sorted by Risk Score in descending order.)
+
+### `<CVE_ID>`
+
+**CVSS v3.1 Base Score:** <score>
+
+**CISA KEV Status:** <Actively Exploited or Not Listed>
+
+**EPSS Score:** <score>
+
+**CWE:** [<CWE-ID>](<cwe_url>)
+
+**Description:** <description_text>
+
+**MITRE ATT&CK Mapping:**
+
+- **Tactic:** [<Tactic_ID>](<tactic_url>)
+- **Technique:** [<Technique_ID>: <Technique_Name>](<technique_url>)
+
+**Defensive Measures:**
+
+**<Rule_Type> Rules:**
+
+```<rule_language>
+<rule_content>
+```
+
+Description: <rule_description>
+
+Source URL: <<rule_source_url>>
+
+(Repeat for all rule types and rules.)
+
+- Ensure all sections and headers are present and correctly formatted.
+- Use a single newline to separate list items and other elements.
+- Use two newlines to separate major sections.
+- Ensure there is a blank line before and after every code block (```).
+- Do not add any extra text or commentary outside of this structure.
+"""
     )
 
     report = await synthesis_agent.run(final_prompt)
