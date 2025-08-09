@@ -125,22 +125,22 @@ Your output MUST follow this structure EXACTLY:
 
 **Description:** <description_text>
 
-**MITRE ATT&CK Mapping:**
+#### MITRE ATT&CK Mapping
 
 - **Tactic:** [<Tactic_ID>](<tactic_url>)
 - **Technique:** [<Technique_ID>: <Technique_Name>](<technique_url>)
 
-**Defensive Measures:**
+#### Defensive Measures
 
-**<Rule_Type> Rules:**
+##### `<Rule_Type>` Rules
 
 ```<rule_language>
 <rule_content>
 ```
 
-Description: <rule_description>
+**Description:** <rule_description>
 
-Source URL: <<rule_source_url>>
+**Source URL:** [<rule_source_url>](<rule_source_url>)
 
 (Repeat for all rule types and rules.)
 
@@ -148,7 +148,10 @@ Source URL: <<rule_source_url>>
 - Use a single newline to separate list items and other elements.
 - Use two newlines to separate major sections.
 - Ensure there is a blank line before and after every code block (```).
-- Do not add any extra text or commentary outside of this structure.
+- Ensure that there is exact one newline at the end of the document.
+- Do not include any extra text or commentary outside of this structure.
+
+Use the provided `Enriched Vulnerabilities` data to populate the report sections. For defensive measures, prioritize including rules in the report that can be referenced with a source URL found through the research. Only generate a Custom rule if a rule cannot be found for a specific CVE with a source URL, then attempt to generate a relevant rule and label its source as "Custom-generated".
 """
     )
 
