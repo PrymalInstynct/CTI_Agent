@@ -215,14 +215,28 @@ def query_epss(cve_ids: list[str]) -> dict[str, float]:
         return {}
 
     url = f"https://api.first.org/data/v1/epss?cve={','.join(cve_ids)}"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        if data.get("status") == "OK" and data.get("data"):
-            return {item["cve"]: float(item["epss"]) for item in data["data"]}
-    except requests.exceptions.RequestException as e:
-        print(f"Error querying EPSS API: {e}")
+    for attempt in range(3):
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if data.get("status") == "OK" and data.get("data"):
+                return {item["cve"]: float(item["epss"]) for item in data["data"]}
+            else:
+                print(f"EPSS API returned non-OK status: {data.get('message')}")
+                return {} # Return empty if status is not OK
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code in [500, 502, 503, 504]:
+                print(f"EPSS API returned a server error ({e.response.status_code}). Retrying in {2 ** attempt} seconds...")
+                time.sleep(2 ** attempt)
+            else:
+                print(f"An unrecoverable HTTP error occurred while querying EPSS API: {e}")
+                return {} # Return empty for other client-side errors
+        except requests.exceptions.RequestException as e:
+            print(f"Error querying EPSS API: {e}. Retrying in {2 ** attempt} seconds...")
+            time.sleep(2 ** attempt)
+    
+    print("Failed to query EPSS API after multiple retries.")
     return {}
 
 def scrape_nvd_cve_info(cve_id: str, crawl_depth: int = 2) -> bool:

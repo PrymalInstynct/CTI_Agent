@@ -107,13 +107,14 @@ Your output MUST follow this structure EXACTLY:
 
 | CVE ID | CVSS v3.1 Score | CISA KEV | EPSS Score | Risk Score |
 | --- | --- | --- | --- | --- |
-(Table rows for each vulnerability, sorted by Risk Score in descending order. KEV status is 'Yes' or 'No'.)
+(Table rows for each vulnerability, sorted by Risk Score in descending order. KEV status is 'Yes' or 'No'. EPSS Score is a numeric value.)
 
 ## Detailed Vulnerability Analysis
 
 (For each vulnerability, create a section like this, sorted by Risk Score in descending order.)
 
-### `<CVE_ID>`
+<details>
+<summary><strong>`<CVE_ID>`</strong></summary>
 
 **CVSS v3.1 Base Score:** <score>
 
@@ -125,12 +126,28 @@ Your output MUST follow this structure EXACTLY:
 
 **Description:** <description_text>
 
+### Mitigations & Remediations
+
+(The list MUST be a bulleted list using `-` and a single space. DO NOT use `*`.
+
+CORRECT FORMAT:
+- Upgrade to version 2.17.1 or later. *[Link to source](https://logging.apache.org/log4j/2.x/security.html)*
+- Disable JNDI lookups. *[Link to source](https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-348a)*
+
+INCORRECT FORMAT:
+*   Upgrade to version 2.17.1 or later. *[Link to source](https://logging.apache.org/log4j/2.x/security.html)*
+
+)
+
+
+### Detection Rules
+
+(For Detection Rules, prioritize including rules in the report that can be referenced with a source URL found through the research. Only generate a Custom rule if a rule cannot be found for a specific CVE with a source URL, then attempt to generate a relevant rule and label its source as "Custom-generated".)
+
 #### MITRE ATT&CK Mapping
 
 - **Tactic:** [<Tactic_ID>](<tactic_url>)
 - **Technique:** [<Technique_ID>: <Technique_Name>](<technique_url>)
-
-#### Defensive Measures
 
 ##### `<Rule_Type>` Rules
 
@@ -144,14 +161,18 @@ Your output MUST follow this structure EXACTLY:
 
 (Repeat for all rule types and rules.)
 
+</details>
+
+
 - Ensure all sections and headers are present and correctly formatted.
 - Use a single newline to separate list items and other elements.
+- Ensure every list only contains a single space after the initial `-` at the beginning of the line.
 - Use two newlines to separate major sections.
 - Ensure there is a blank line before and after every code block (```).
 - Ensure that there is exact one newline at the end of the document.
 - Do not include any extra text or commentary outside of this structure.
 
-Use the provided `Enriched Vulnerabilities` data to populate the report sections. For defensive measures, prioritize including rules in the report that can be referenced with a source URL found through the research. Only generate a Custom rule if a rule cannot be found for a specific CVE with a source URL, then attempt to generate a relevant rule and label its source as "Custom-generated".
+Use the provided `Enriched Vulnerabilities` data to populate the report sections.
 """
     )
 
