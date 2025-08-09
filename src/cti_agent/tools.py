@@ -90,19 +90,20 @@ def correlate_with_cisa_kev(cve_ids: list[str]) -> dict:
 
     return kev_info
 
-def get_cpe_for_component(component_name: str, component_version: str) -> str:
-    """Generates a CPE 2.3 string for a component.
-
-    Args:
-        component_name: The name of the component.
-        component_version: The version of the component.
-
-    Returns:
-        A CPE 2.3 string.
-    """
-    # This is a simplified implementation. A real implementation would use a more
-    # sophisticated method to generate the CPE string.
-    return f"cpe:2.3:a:{component_name.lower().replace(' ', '_')}:{component_name.lower().replace(' ', '_')}:{component_version}:*:*:*:*:*:*:*"
+async def get_cpe_for_component(component_name: str, component_version: str) -> str:
+    """Generates a CPE 2.3 string for a component using an LLM for accuracy."""
+    cpe_agent = Agent(
+        'google-gla:gemini-2.5-flash',
+        system_prompt=f"""You are an expert at generating Common Platform Enumeration (CPE) strings. 
+        Your task is to generate the most accurate CPE 2.3 string for a given software component and version. 
+        Provide only the CPE string as a direct response, without any additional explanation or text.
+        
+        Component: {component_name}
+        Version: {component_version}
+        """
+    )
+    response = await cpe_agent.run("")
+    return response.output.strip()
 
 def map_cve_to_attack(cve_id: str, cve_description: str) -> list[dict]:
     """Maps a CVE to MITRE ATT&CK tactics and techniques.

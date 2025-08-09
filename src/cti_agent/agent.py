@@ -41,51 +41,83 @@ Finally, use the results from the tool to formulate a user-friendly answer.
 def calculate_risk_score(enriched_vulnerability: EnrichedVulnerability) -> float:
     """Calculates a risk score for an enriched vulnerability."""
     # Weights for each factor
-    w_cvss = 0.3
-    w_kev = 0.4
-    w_attack = 0.1
+    w_cvss = 0.5
+    w_kev = 0.3
     w_epss = 0.2
 
-    # CVSS Score
-    cvss_score = enriched_vulnerability.vulnerability.cvss_score or 0.0
+    # CVSS Score (0-10), scaled to 100 for impact
+    cvss_score = (enriched_vulnerability.vulnerability.cvss_score or 0.0) * 10
 
-    # KEV Flag
-    kev_flag = 10.0 if enriched_vulnerability.is_in_kev else 0.0
+    # KEV Flag (0 or 1), scaled to 100 for impact
+    kev_flag = 100.0 if enriched_vulnerability.is_in_kev else 0.0
 
-    # ATT&CK Impact
-    attack_impact = 0.0
-    if enriched_vulnerability.attack_mappings:
-        # This is a simplified impact score. A real implementation would have a
-        # more sophisticated mapping of tactics to impact.
-        attack_impact = 5.0
+    # EPSS Score (0-1), scaled to 100 for impact
+    epss_score = (enriched_vulnerability.epss_score or 0.0) * 100
 
-    # EPSS Score
-    epss_score_value = enriched_vulnerability.epss_score or 0.0
-
-    risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_attack * attack_impact) + (w_epss * epss_score_value * 10)
-    return risk_score
+    # Weighted average
+    risk_score = (w_cvss * cvss_score) + (w_kev * kev_flag) + (w_epss * epss_score)
+    return round(risk_score, 2)
 
 async def run_analysis(sbom_file_path: str, crawl_depth: int = 2):
     """Runs the full analysis on an SBOM file."""
+    print("--- Starting Analysis ---")
     sbom_data, is_new_sbom = data_manager.load_and_store_sbom(sbom_file_path)
+    
+    # 1. Extract components from SBOM
+    components = await extract_entities_from_sbom(sbom_data)
+    print(f"Found {len(components)} components in SBOM.")
 
-    # 1. Extract entities from SBOM
-    entities = await extract_entities_from_sbom(sbom_data)
+    # 2. Deterministic CVE Lookup and Enrichment
+    all_vulnerabilities = {}
+    for component in components:
+        print(f"Processing component: {component.name} v{component.version}")
+        cpe_string = await tools.get_cpe_for_component(component.name, component.version)
+        print(f"  Generated CPE: {cpe_string}")
+        cves = tools.query_nvd_for_cves(cpe_string)
+        print(f"  Found {len(cves)} CVEs for this CPE.")
+        for cve in cves:
+            if cve.cve_id not in all_vulnerabilities:
+                all_vulnerabilities[cve.cve_id] = cve
 
-    # 2. Generate search queries
-    queries = generate_search_queries(entities)
+    cve_ids = list(all_vulnerabilities.keys())
+    print(f"Total unique CVEs found: {len(cve_ids)}")
+    kev_info = tools.correlate_with_cisa_kev(cve_ids)
+    epss_scores = tools.query_epss(cve_ids)
+    print(f"Found {len(epss_scores)} EPSS scores.")
 
-    # 3. Search vector store
-    context = ""
-    for query in queries:
-        context += await tools.search_vector_store(query)
+    # 3. Build Enriched Data Structure and Calculate Risk Score
+    enriched_vulnerabilities = []
+    for cve_id, cve in all_vulnerabilities.items():
+        is_in_kev = cve_id in kev_info
+        epss_score = epss_scores.get(cve_id)
 
-    # 4. Final report synthesis
-    final_prompt = f"""Based on the following security intelligence context and the provided SBOM, generate a comprehensive threat intelligence report. List all relevant Snort, Sigma, and Yara rules that apply to the components and vulnerabilities identified.
+        attack_mappings = tools.map_cve_to_attack(cve_id, cve.description)
+        defensive_measures = await tools.find_defensive_measures(cve_id)
 
-Context: {context}
+        enriched_vuln = EnrichedVulnerability(
+            vulnerability=cve,
+            is_in_kev=is_in_kev,
+            kev_details=kev_info.get(cve_id),
+            epss_score=epss_score,
+            attack_mappings=attack_mappings,
+            defensive_measures=defensive_measures
+        )
+        enriched_vuln.risk_score = calculate_risk_score(enriched_vuln)
+        enriched_vulnerabilities.append(enriched_vuln)
 
-SBOM: {sbom_data}"""
+    # Sort vulnerabilities by the calculated risk score
+    enriched_vulnerabilities.sort(key=lambda x: x.risk_score, reverse=True)
+    print("--- Finished Analysis, Generating Report ---")
+
+    # 4. Final Report Synthesis (LLM as a renderer)
+    final_prompt = f"""Based on the following structured vulnerability data, generate a comprehensive threat intelligence report. Do not perform any analysis; simply render the provided data into the specified Markdown format.
+
+Enriched Vulnerabilities:
+{json.dumps([v.model_dump() for v in enriched_vulnerabilities], indent=2, default=str)}
+
+SBOM Filename: {os.path.basename(sbom_file_path)}
+"""
+
 
     # Create the synthesis agent with a detailed system prompt for formatting
     synthesis_agent = Agent(
@@ -107,7 +139,7 @@ Your output MUST follow this structure EXACTLY:
 
 | CVE ID | CVSS v3.1 Score | CISA KEV | EPSS Score | Risk Score |
 | --- | --- | --- | --- | --- |
-(Table rows for each vulnerability, sorted by Risk Score in descending order. KEV status is 'Yes' or 'No'. EPSS Score is a numeric value.)
+(Table rows for each vulnerability, sorted by Risk Score in descending order. KEV status is 'Yes' or 'No'. If the EPSS score is null or 0.0, display 'N/A'.)
 
 ## Detailed Vulnerability Analysis
 
