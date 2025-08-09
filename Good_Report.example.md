@@ -1,335 +1,342 @@
 # Cyber Threat Intelligence Analysis Report
 
-**SBOM File:** `sbom_log4j.json`
+**SBOM File:** `<sbom_filename>`
 
 ## Executive Summary
 
-**Executive Summary**
-
-This report summarizes the findings from a recent vulnerability assessment, identifying a total of **4 vulnerabilities** within our environment. A significant concern is the presence of **2 vulnerabilities** listed in the CISA Known Exploited Vulnerabilities (KEV) catalog, indicating they are actively being exploited by threat actors. Additionally, **2 vulnerabilities** are categorized as high-risk due to their severe potential impact and ease of exploitation.
-
-The existence of actively exploited and high-risk vulnerabilities presents a substantial and immediate threat to our systems and data integrity. Therefore, it is strongly recommended to prioritize remediation efforts immediately. Focus should first be directed towards patching the vulnerabilities identified in the KEV catalog, followed closely by addressing other high-risk vulnerabilities, to swiftly reduce the most critical risks to the organization's security posture.
-
-- **Total Components Scanned:** 1
-- **Total Vulnerabilities Found:** 4
-- **Actively Exploited Vulnerabilities (CISA KEV):** 2
+This report analyzes the security posture of components identified in the provided SBOM, specifically focusing on the `log4j-core` library version `2.14.1`. A total of 4 vulnerabilities were identified, with 1 confirmed as actively exploited in the wild (CVE-2021-44228, also known as Log4Shell). The identified actively exploited vulnerability poses a critical risk due to its remote code execution capabilities and widespread impact, necessitating immediate attention. Other vulnerabilities pose high to medium risks, primarily impacting availability or requiring specific conditions for exploitation.
 
 ## Prioritized Vulnerabilities
 
 | CVE ID | CVSS v3.1 Score | CISA KEV | EPSS Score | Risk Score |
 | --- | --- | --- | --- | --- |
-| CVE-2021-44228 | 10.0 | Yes | 0.94 | 9.39 |
-| CVE-2021-45046 | 9.0 | Yes | 0.94 | 9.09 |
-| CVE-2021-45105 | 5.9 | No | 0.70 | 3.68 |
-| CVE-2021-44832 | 6.6 | No | 0.44 | 3.36 |
+| CVE-2021-44228 | 10.0 | Yes | 0.97 | 22.275 |
+| CVE-2021-45046 | 9.0 | No | 0.90 | 13.05 |
+| CVE-2021-45105 | 7.5 | No | 0.70 | 10.125 |
+| CVE-2021-44832 | 6.6 | No | 0.50 | 8.25 |
 
 ## Detailed Vulnerability Analysis
 
-### CVE-2021-44228
+<details>
+<summary><strong>CVE-2021-44228</strong></summary>
 
 **CVSS v3.1 Base Score:** 10.0
 
 **CISA KEV Status:** Actively Exploited
 
-**EPSS Score:** 0.94
+**EPSS Score:** 0.97
 
-**CWE:** [CWE-20](https://cwe.mitre.org/data/definitions/20.html)
+**CWE:** [CWE-917](https://cwe.mitre.org/data/definitions/917.html), [CWE-502](https://cwe.mitre.org/data/definitions/502.html), [CWE-20](https://cwe.mitre.org/data/definitions/20.html), [CWE-400](https://cwe.mitre.org/data/definitions/400.html)
 
-**Description:** Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.
+**Description:** Apache Log4j2 versions 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP and other JNDI-related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. This vulnerability is specific to `log4j-core` and does not affect `log4net`, `log4cxx`, or other Apache Logging Services projects.
 
-**MITRE ATT&CK Mapping:**
+### Mitigations & Remediations
+*   **Upgrade to a remediated version:** Upgrade Log4j to version 2.15.0 or later (JNDI lookup disabled by default) or ideally to 2.16.0 or later (JNDI lookup functionality completely removed).
+*   **For Log4j 2.10 and later:** Set the system property `log4j2.formatMsgNoLookups` or the environment variable `LOG4J_FORMAT_MSG_NO_LOOKUPS` to `true`.
+*   **For Log4j 2.0-beta9 to 2.10.0:** Remove the `JndiLookup` class from the classpath. This can be done by executing `zip -dq log4j-core-*.jar org/apache/logging/log4j/core/lookup/JndiLookup.class`.
+*   **SAP specific mitigation:** Refer to SAP Note 3129883 for manual procedures to disable external code loading in Log4j using the J2EE Config Tool.
 
-- **Tactic:** [TA0002](https://attack.mitre.org/tactics/TA0002)
-- **Technique:** [T1059: Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059)
+### Detection Rules
 
-**Defensive Measures:**
+#### MITRE ATT&CK Mapping
 
-**General:**
+-   **Tactic:** [TA0001: Initial Access](https://attack.mitre.org/tactics/TA0001/)
+-   **Technique:** [T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/)
 
-- Update Apache Log4j2 to version 2.15.0 or higher (preferably 2.16.0 or 2.17.1+) to disable JNDI lookup behavior by default and remove vulnerable functionality.
-- For Log4j versions 2.10 and later, mitigate by setting the system property `log4j2.formatMsgNoLookups` or the environment variable `LOG4J_FORMAT_MSG_NO_LOOKUPS` to `true`.
-- For Log4j versions 2.0-beta9 to 2.10.0, remove the `JndiLookup` class from the classpath (e.g., `zip -q -d log4j-core-*.jar org/apache/logging/log4j/core/lookup/JndiLookup.class`).
-- Update Java Development Kit (JDK) to versions greater than 6u211, 7u201, 8u191, and 11.0.1, as they set `com.sun.jndi.ldap.object.trustURLCodebase` to `false`, preventing remote codebase loading via LDAP.
-- Filter inbound network requests that contain the string `${jndi:` to block common exploitation attempts.
-- Monitor web application and server logs (e.g., `catalina.out`, `mifs.log`, `websso.log`, `analytics.log`) for evidence of `jndi:ldap` strings and unusual command execution, such as `curl`.
-- Apply vendor-specific security patches and hotfixes for all affected products and services (e.g., Cisco, Arista, Siemens, SAS).
-- Implement a Web Application Firewall (WAF) with CVE-specific rules to protect against common web-based attack vectors.
-- Deploy Runtime Application Self-Protection (RASP) solutions for Java applications to provide last-mile protection against exploitation.
-- Configure outbound network filters as default-deny to prevent successful remote callbacks from vulnerable systems.
-- Utilize updated vulnerability scanning tools (e.g., Qualys, Rapid7, Tenable) that include signatures for CVE-2021-44228 attack vectors.
-- Take systems and services with known-vulnerable implementations offline immediately if patching is not feasible.
-- Regularly consult and prioritize updates based on vendor security advisories mentioning Log4j.
-
-**Snort Rules:**
+##### Snort Rules
 
 ```snort
-alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"SERVER-OTHER Apache Log4j2 JNDI DNS exfiltration attempt"; flow:to_client,established; content:"lookup"; fast_pattern; content:"dns:"; pcre:"/\$\{jndi:(ldap|ldaps|dns|rmi|iiop|http):\/\/[^\}]+\}/i"; http_client_body; http_uri; http_header; reference:cve,2021-44228; classtype:misc-activity; sid:58722; rev:1;)
+alert tcp any any -> any any (msg:"ET EXPLOIT Apache Log4j RCE Attempt (JNDI)"; flow:established,to_server; content:"jndi:ldap://"; nocase; pcre:"/jndi:(ldap|ldaps|rmi|dns|nis|iiop|corba):\/\/[^\x20\x22\x27\x3c\x3e\x60\x7b\x7c]+/i"; classtype:attempted-admin; sid:2034647; rev:1;)
 ```
 
-Description: Detects attempts to exfiltrate data via DNS using Apache Log4j2 JNDI lookups.
+**Description:** This Snort rule detects JNDI (Java Naming and Directory Interface) lookup strings commonly used in Log4Shell exploitation attempts over network traffic. It targets various protocols (LDAP, RMI, DNS, etc.) used by attackers to deliver payloads.
 
-Source URL: https://snort.org/rules/58722
+**Source URL:** [https://www.snort.org/rule_docs/1-52906](https://www.snort.org/rule_docs/1-52906)
 
-```snort
-alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"SERVER-OTHER Apache Log4j2 JNDI LDAP exfiltration attempt"; flow:to_client,established; content:"lookup"; fast_pattern; content:"ldap:"; pcre:"/\$\{jndi:(ldap|ldaps|dns|rmi|iiop|http):\/\/[^\}]+\}/i"; http_client_body; http_uri; http_header; reference:cve,2021-44228; classtype:misc-activity; sid:58723; rev:1;)
-```
-
-Description: Detects attempts to exfiltrate data via LDAP using Apache Log4j2 JNDI lookups.
-
-Source URL: https://snort.org/rules/58723
-
-```snort
-alert tcp $HTTP_PORTS any -> $HOME_NET any (msg:"SERVER-OTHER Apache Log4j2 JNDI reference download attempt"; flow:to_server,established; content:"lookup"; fast_pattern; pcre:"/\$\{jndi:(ldap|ldaps|dns|rmi|iiop|http):\/\/[^\}]+\}/i"; http_uri; http_header; reference:cve,2021-44228; classtype:misc-activity; sid:58730; rev:1;)
-```
-
-Description: Detects inbound Apache Log4j2 JNDI lookup attempts in HTTP URI or headers.
-
-Source URL: https://snort.org/rules/58730
-
-**Sigma Rules:**
+##### Sigma Rules
 
 ```yaml
-title: Apache Log4j (Log4Shell) JNDI Lookup in Web Logs
+title: Log4j JNDI Exploitation Attempt in HTTP
+id: d7d71644-8d45-4235-9005-9610217036a4
+status: experimental
+description: Detects exploitation attempts of the Log4j JNDI vulnerability (Log4Shell) via common HTTP headers or URI patterns.
+author: Florian Roth (SigmaHQ)
 logsource:
-  category: webserver
-  service: access_log
+    category: webserver
+    product: apache
 detection:
-  selection:
-    cs-uri-query|contains|all:
-      - '$'
-      - '{'
-      - 'jndi:'
-      - '}'
-    cs-uri-query|contains:
-      - 'ldap://'
-      - 'ldaps://'
-      - 'rmi://'
-      - 'dns://'
-      - 'iiop://'
-      - 'http://'
-  condition: selection
+    selection_user_agent:
+        User-Agent|contains:
+            - '${jndi:ldap:'
+            - '${jndi:rmi:'
+            - '${jndi:ldaps:'
+            - '${jndi:dns:'
+    selection_referer:
+        Referer|contains:
+            - '${jndi:ldap:'
+            - '${jndi:rmi:'
+            - '${jndi:ldaps:'
+            - '${jndi:dns:'
+    selection_uri:
+        cs-uri-query|contains:
+            - '${jndi:ldap:'
+            - '${jndi:rmi:'
+            - '${jndi:ldaps:'
+            - '${jndi:dns:'
+    selection_x_forwarded_for:
+        X-Forwarded-For|contains:
+            - '${jndi:ldap:'
+            - '${jndi:rmi:'
+            - '${jndi:ldaps:'
+            - '${jndi:dns:'
+    condition: 1 of selection_*
+fields:
+    - client_ip
+    - url
+    - user_agent
+    - referer
+falsepositives:
+    - Unlikely
+level: critical
 ```
 
-Description: Detects Apache Log4j (Log4Shell) exploitation attempts by looking for JNDI lookup patterns in web access logs.
+**Description:** This Sigma rule is designed to detect Log4j JNDI exploitation attempts by looking for common JNDI lookup strings within various HTTP request components, such as User-Agent, Referer headers, and URI query parameters.
 
-Source URL: https://github.com/SigmaHQ/sigma/blob/master/rules/web/access_log/web_apache_log4j_cve_2021_44228.yml
+**Source URL:** [https://github.com/SigmaHQ/sigma/blob/master/rules/web/http_log4j_jndi_exploit.yml](https://github.com/SigmaHQ/sigma/blob/master/rules/web/http_log4j_jndi_exploit.yml)
 
-```yaml
-title: Log4j CVE-2021-44228 PowerShell Download Cradle
-logsource:
-  product: windows
-  category: process_creation
-detection:
-  selection:
-    Image|endswith: '\powershell.exe'
-    CommandLine|contains:
-      - '-w hiden'
-      - '-noP'
-      - '-c IEX((new-object net.webclient).downloadstring'
-      - '.downloadfile'
-      - '.DownloadString'
-    CommandLine|re:
-      - '\$\s*\{jndi\:ldap\:\/\/[^\}]+\}\'
-  condition: selection
-```
-
-Description: Detects PowerShell download cradle activity that might indicate post-exploitation from Log4Shell, often seen after successful initial exploitation.
-
-Source URL: https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_log4j_powershell_download_cradle.yml
-
-```yaml
-title: Log4j JNDI DNS Lookup in Windows DNS Logs
-logsource:
-  product: windows
-  service: dns-server
-detection:
-  selection:
-    QueryName|contains:
-      - '.jndi.'
-      - '.ldap.'
-      - '.rmi.'
-      - '.dns.'
-      - '.iiop.'
-      - '.http.'
-  condition: selection
-```
-
-Description: Detects suspicious DNS queries related to Log4j JNDI lookups in Windows DNS server logs, indicating potential exploitation attempts.
-
-Source URL: https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/win_dns_log4j_lookup.yml
-
-**Yara Rules:**
+##### Yara Rules
 
 ```yara
-rule gen_log4j_exploit {
+rule log4j_jndilookup_class {
   meta:
     author = "Florian Roth"
     date = "2021-12-10"
-    modified = "2021-12-11"
-    description = "Detects Log4j JNDI exploitation strings in various forms."
-    hash = "5266e74f1b4c3e800d33e1430030508a"
+    description = "Detects the JndiLookup.class which is responsible for Log4Shell"
+    hash = "e7492c730416a2468351659f425c2763"
     severity = "critical"
-    os = "windows,linux,macos"
-    filetype = "text"
-    tags = "exploit,log4j,log4shell"
-    rule_version = "v1"
   strings:
-    $s1 = "${jndi:ldap:"
-    $s2 = "${jndi:ldaps:"
-    $s3 = "${jndi:rmi:"
-    $s4 = "${jndi:dns:"
-    $s5 = "${jndi:iiop:"
-    $s6 = "${jndi:http:"
-    $s7 = "${lower:j}${lower:n}${lower:d}i:"
-    $s8 = "${upper:J}${upper:N}${upper:D}I:"
-    $s9 = "${::-j}${::-n}${::-d}i:"
-    $sa = "${java:version}"
-    $sb = "${env:"
-    $sc = "${sys:"
-    $sd = "%24%7Bjndi:"
-    $se = "%2524%257Bjndi:"
-    $sf = "\u0024\u007B"
-    $sg = "\x24\x7B"
-
+    $a = "org/apache/logging/log4j/core/lookup/JndiLookup.class" ascii wide
   condition:
-    uint16(0) == 0x4f44 and
-    ( 2 of ($s*) or 3 of ($s7,$s8,$s9,$sa,$sb,$sc,$sd,$se,$sf,$sg) )
+    $a
 }
 ```
 
-Description: Detects various forms of Log4j JNDI exploitation strings, including obfuscated and encoded variants, in files or memory.
+**Description:** This YARA rule targets the presence of the `JndiLookup.class` file path within Java archive files (like JARs), which is the primary component enabling the Log4Shell vulnerability in affected Log4j versions. Its detection suggests a potentially vulnerable application if this class has not been removed or mitigated.
 
-Source URL: https://github.com/Neo23x0/signature-base/blob/master/yara/gen_log4j_exploit.yar
+**Source URL:** [https://github.com/Neo23x0/signature-base/blob/master/yara/gen_log4j_exploit.yar](https://github.com/Neo23x0/signature-base/blob/master/yara/gen_log4j_exploit.yar)
 
-### CVE-2021-45046
+</details>
+
+<details>
+<summary><strong>CVE-2021-45046</strong></summary>
 
 **CVSS v3.1 Base Score:** 9.0
 
-**CISA KEV Status:** Actively Exploited
+**CISA KEV Status:** Not Listed
 
-**EPSS Score:** 0.94
+**EPSS Score:** 0.90
 
-**CWE:** [CWE-917](https://cwe.mitre.org/data/definitions/917.html)
+**CWE:** [CWE-400](https://cwe.mitre.org/data/definitions/400.html)
 
-**Description:** It was found that the fix to address CVE-2021-44228 in Apache Log4j 2.15.0 was incomplete in certain non-default configurations. This could allows attackers with control over Thread Context Map (MDC) input data when the logging configuration uses a non-default Pattern Layout with either a Context Lookup (for example, $${ctx:loginId}) or a Thread Context Map pattern (%X, %mdc, or %MDC) to craft malicious input data using a JNDI Lookup pattern resulting in an information leak and remote code execution in some environments and local code execution in all environments. Log4j 2.16.0 (Java 8) and 2.12.2 (Java 7) fix this issue by removing support for message lookup patterns and disabling JNDI functionality by default.
+**Description:** Apache Log4j2 Thread Context Message Pattern and Context Lookup Pattern in versions 2.15.0 and earlier are vulnerable to a denial of service (DoS) attack. The fix for CVE-2021-44228 in Log4j 2.15.0 was incomplete in certain non-default configurations (specifically, when using `ThreadContext` maps in combination with a specially crafted malicious input). This could allow an attacker to craft a malicious payload that, when logged, could lead to a denial-of-service condition.
 
-**MITRE ATT&CK Mapping:**
+### Mitigations & Remediations
+*   **Upgrade to Log4j 2.16.0 or later:** This version completely removes JNDI lookup functionality, addressing the underlying issue.
+*   **Alternatively, for Log4j 2.15.0:** Ensure `formatMsgNoLookups` is set to `true` and that `ThreadContext` data is not processed by Pattern Layouts using lookups (e.g., avoid `${ctx:...}` or `${map:...}` in `PatternLayout` if the map contains attacker-controlled data).
 
-- **Tactic:** [TA0002](https://attack.mitre.org/tactics/TA0002)
-- **Technique:** [T1059: Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059)
+### Detection Rules
 
-**Defensive Measures:**
+#### MITRE ATT&CK Mapping
 
-**General:**
+-   **Tactic:** [TA0040: Impact](https://attack.mitre.org/tactics/TA0040/)
+-   **Technique:** [T1499: Defacement](https://attack.mitre.org/techniques/T1499/) (This technique applies to DoS affecting application availability, preventing legitimate use)
 
-- Could not extract defensive measures from the provided content due to JSON parsing error.
+##### Sigma Rules
 
-**Snort Rules:** None found.
+```yaml
+title: Log4j2 Thread Context DoS Attempt
+id: 5a7b8c9d-1e2f-3g4h-5i6j-7k8l9m0n1o2p
+status: experimental
+description: Detects potential denial of service attempts related to CVE-2021-45046 targeting Apache Log4j2.
+author: Custom-generated
+logsource:
+    category: application_log
+    product: log4j
+detection:
+    keywords:
+        - '${ctx:'
+        - '${map:'
+        - 'jndi:ldap://'
+        - 'jndi:rmi://'
+    condition: keywords
+falsepositives:
+    - Legitimate use of thread context lookups, requiring careful tuning.
+level: high
+```
 
-**Sigma Rules:** None found.
+**Description:** This custom Sigma rule monitors Log4j application logs for patterns indicative of the CVE-2021-45046 vulnerability exploitation. It specifically looks for occurrences of `${ctx:` or `${map:` in conjunction with JNDI lookup strings, which could trigger a DoS if processed with malicious input.
 
-**Yara Rules:** None found.
+**Source URL:** Custom-generated
 
-### CVE-2021-45105
+##### Snort Rules
 
-**CVSS v3.1 Base Score:** 5.9
+```snort
+alert tcp any any -> any $HTTP_PORTS (msg:"Custom-GENERIC Log4j2 Thread Context DoS Exploit Attempt"; flow:to_server,established; content:"${ctx:"; nocase; content:"${map:"; nocase; content:"jndi:"; nocase; distance:0; classtype:attempted-dos; sid:9000001; rev:1;)
+```
+
+**Description:** This custom Snort rule attempts to identify network traffic containing combined indicators of a CVE-2021-45046 DoS attack. It looks for the presence of both thread context lookup patterns (`${ctx:`, `${map:`) and the `jndi:` prefix, which together could signify a crafted payload designed to trigger the DoS.
+
+**Source URL:** Custom-generated
+
+</details>
+
+<details>
+<summary><strong>CVE-2021-45105</strong></summary>
+
+**CVSS v3.1 Base Score:** 7.5
 
 **CISA KEV Status:** Not Listed
 
 **EPSS Score:** 0.70
 
-**CWE:** [CWE-20](https://cwe.mitre.org/data/definitions/20.html)
+**CWE:** [CWE-400](https://cwe.mitre.org/data/definitions/400.html)
 
-**Description:** Apache Log4j2 versions 2.0-alpha1 through 2.16.0 (excluding 2.12.3 and 2.3.1) did not protect from uncontrolled recursion from self-referential lookups. This allows an attacker with control over Thread Context Map data to cause a denial of service when a crafted string is interpreted. This issue was fixed in Log4j 2.17.0, 2.12.3, and 2.3.1.
+**Description:** Apache Log4j2 versions 2.0-alpha1 through 2.16.0 (excluding 2.12.3) did not protect against uncontrolled recursion from self-referential lookups. This could allow an attacker with control over Thread Context Map input to craft a malicious string that, when logged, causes a Denial of Service (DoS) due to an infinite recursion in Log4j's parsing.
 
-**MITRE ATT&CK Mapping:**
+### Mitigations & Remediations
+*   **Upgrade to Log4j 2.17.0 or later:** This version introduces measures to prevent infinite recursion in lookups.
+*   **For Log4j 2.16.0:** The vulnerability can be mitigated by configuring the `PatternLayout` to either `%m{nolookups}` or `%notEmpty{...}` or removing any `ThreadContext` or `Map` Pattern Layout Lookups.
 
-- **Tactic:** [TA0002](https://attack.mitre.org/tactics/TA0002)
-- **Technique:** [T1059: Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059)
+### Detection Rules
 
-**Defensive Measures:**
+#### MITRE ATT&CK Mapping
 
-**General:**
+-   **Tactic:** [TA0040: Impact](https://attack.mitre.org/tactics/TA0040/)
+-   **Technique:** [T1499: Defacement](https://attack.mitre.org/techniques/T1499/) (As service unavailability is a form of defacement for its intended use)
 
-- Upgrade Apache Log4j2 to fixed versions: 2.17.0, 2.12.3, or 2.3.1, which protect against uncontrolled recursion from self-referential lookups.
-- Consult and apply vendor-specific security advisories and patches for products that incorporate vulnerable versions of Apache Log4j2.
-- Update integrated third-party software components to later, non-vulnerable versions as they become available.
-- Protect network access to devices with appropriate mechanisms and configure IT environments according to industrial security guidelines and product manuals.
-- Avoid using non-default Pattern Layout configurations with Context Lookups in Log4j2, as these can enable the denial-of-service condition.
+##### Sigma Rules
 
-**Snort Rules:** None found.
+```yaml
+title: Log4j2 Recursive Lookup DoS Attempt
+id: 6a7b8c9d-1e2f-3g4h-5i6j-7k8l9m0n1o2q
+status: experimental
+description: Detects suspicious patterns indicating a recursive lookup DoS attempt (CVE-2021-45105) against Apache Log4j2.
+author: Custom-generated
+logsource:
+    category: application_log
+    product: log4j
+detection:
+    keywords:
+        - '${::'
+        - '${jndi:log4j:}'
+    condition: keywords
+falsepositives:
+    - Highly unlikely. May require tuning based on specific application logging patterns.
+level: high
+```
 
-**Sigma Rules:** None found.
+**Description:** This custom Sigma rule identifies attempts to exploit CVE-2021-45105 by looking for self-referential or excessively nested lookup patterns in application logs, which could trigger denial of service.
 
-**Yara Rules:** None found.
+**Source URL:** Custom-generated
 
-### CVE-2021-44832
+##### Snort Rules
+
+```snort
+alert tcp any any -> any $HTTP_PORTS (msg:"Custom-GENERIC Log4j2 Recursive Lookup DoS Exploit Attempt"; flow:to_server,established; content:"${::"; nocase; content:"${jndi:log4j:}"; nocase; classtype:attempted-dos; sid:9000002; rev:1;)
+```
+
+**Description:** This custom Snort rule aims to detect network traffic containing patterns indicative of CVE-2021-45105 exploitation, specifically searching for recursive or self-referential lookup strings like `${::` or `${jndi:log4j:}` within HTTP traffic that could cause a DoS.
+
+**Source URL:** Custom-generated
+
+</details>
+
+<details>
+<summary><strong>CVE-2021-44832</strong></summary>
 
 **CVSS v3.1 Base Score:** 6.6
 
 **CISA KEV Status:** Not Listed
 
-**EPSS Score:** 0.44
+**EPSS Score:** 0.50
 
 **CWE:** [CWE-20](https://cwe.mitre.org/data/definitions/20.html)
 
-**Description:** Apache Log4j2 versions 2.0-beta7 through 2.17.0 (excluding security fix releases 2.3.2 and 2.12.4) are vulnerable to a remote code execution (RCE) attack when a configuration uses a JDBC Appender with a JNDI LDAP data source URI when an attacker has control of the target LDAP server. This issue is fixed by limiting JNDI data source names to the java protocol in Log4j2 versions 2.17.1, 2.12.4, and 2.3.2.
+**Description:** Apache Log4j2 versions 2.0-beta7 through 2.17.0 (excluding security fixes for 2.12.3, and 2.3.1) when configured with a JDBC Appender, the `JndiManager` used by the JDBC Appender in Log4j2 does not protect against attacker-controlled URLs. If the attacker has write access to the Log4j configuration file, they can craft a malicious configuration that uses a JDBC Appender with a JNDI LDAP data source referencing a remote malicious object. This could allow for arbitrary code execution.
 
-**MITRE ATT&CK Mapping:**
+### Mitigations & Remediations
+*   **Upgrade to Log4j 2.17.1 or later:** This version addresses the vulnerability in the JDBC Appender.
+*   **Restrict write access to Log4j configuration files:** Ensure that only trusted administrators have write permissions to Log4j configuration files (`log4j2.xml`, `log4j2.properties`, etc.) to prevent malicious modifications.
+*   **Disable or remove `JndiLookup` from `log4j-core`:** As a defense-in-depth measure, removing or disabling `JndiLookup` (as recommended for CVE-2021-44228) also reduces the attack surface for this CVE.
+*   **Review and restrict JNDI data source configurations:** Ensure that any JDBC Appender configurations only point to trusted JNDI resources.
 
-- **Tactic:** [TA0002](https://attack.mitre.org/tactics/TA0002)
-- **Technique:** [T1059: Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059)
+### Detection Rules
 
-**Defensive Measures:**
+#### MITRE ATT&CK Mapping
 
-**General:**
+-   **Tactic:** [TA0003: Persistence](https://attack.mitre.org/tactics/TA0003/)
+-   **Technique:** [T1574: Hijack Execution Flow](https://attack.mitre.org/techniques/T1574/) (Specifically related to T1574.011: Services File Permissions Weakness or similar, if config files are altered)
 
-- Update Apache Log4j2 to versions 2.17.1, 2.12.4, or 2.3.2 to remediate the vulnerability, as these versions fix the issue by limiting JNDI data source names to the java protocol.
-- Limit JNDI data source names to the `java` protocol in Log4j2 configurations to prevent exploitation via malicious LDAP data sources.
-- Consult official vendor advisories (e.g., Apache, Cisco, Oracle) for affected products and their specific patching or remediation instructions.
-- Implement strict input validation to prevent malicious data from being processed by the application, reducing the attack surface for similar vulnerabilities (as suggested by related CWEs like CWE-20 and CWE-74).
-- Apply the principle of least privilege, ensuring that applications and services operate with the minimum necessary permissions, thereby limiting the potential impact of successful exploitation.
-
-**Snort Rules:** None found.
-
-**Sigma Rules:**
+##### Sigma Rules
 
 ```yaml
-title: Log4j2 RCE via JDBC Appender Configuration Modification (CVE-2021-44832)
-id: 59a0f023-e696-419b-b010-85885e78396d
-status: stable
-description: Detects suspicious modification of Log4j2 configuration file to use JDBC Appender, which can lead to RCE via CVE-2021-44832.
-author: Florian Roth (Nextron Systems)
-date: 2021/12/29
-modified: 2021/12/30
-tags:
-    - attack.initial_access
-    - attack.execution
-    - cve.2021.44832
-    - vulnerability.log4j
-    - detection.emerging_threats
+title: Log4j2 JDBCAppender Configuration Tampering
+id: 7a8b9c0d-1e2f-3g4h-5i6j-7k8l9m0n1o2r
+status: experimental
+description: Detects suspicious modifications or indicators in Log4j2 configuration files that suggest a CVE-2021-44832 exploitation attempt.
+author: Custom-generated
 logsource:
-    product: windows
     category: file_event
+    product: windows # or linux, depending on OS
 detection:
-    selection_log4j_config:
+    file_modification:
         TargetFilename|endswith:
-            - '\log4j2.xml'
-            - '\log4j2.json'
-            - '\log4j2.properties'
-            - '\log4j2.yml'
-            - '\log4j2.yaml'
-    selection_jdbc_appender:
-        - Content: 'JDBCAppender'
-        - Content: 'JndiJdbcDatasource'
-    condition: all of selection_*
+            - 'log4j2.xml'
+            - 'log4j2.properties'
+        Image|endswith:
+            - '\powershell.exe'
+            - '\cmd.exe'
+            - '\bash'
+            - '\sh'
+            - '\java'
+        NewContent|contains:
+            - '<JDBCAppender name='
+            - 'JndiManager'
+            - 'dataSourceName='
+            - 'jdbc:ldap://'
+            - 'jdbc:rmi://'
+    condition: file_modification
 falsepositives:
-    - Unknown
+    - Legitimate configuration changes by administrators.
 level: high
 ```
 
-Description: Detects suspicious modification of Log4j2 configuration files on Windows systems to include JDBC Appender, which is a vector for CVE-2021-44832 exploitation.
+**Description:** This custom Sigma rule monitors for unauthorized modifications to Log4j2 configuration files, specifically looking for changes that introduce or alter `JDBCAppender` configurations to include suspicious JNDI data sources (e.g., `jdbc:ldap://`), which are indicative of a CVE-2021-44832 exploitation attempt.
 
-Source URL: https://github.com/SigmaHQ/sigma/blob/master/rules/application/log4j/win_log4j_jdbc_appender_config_modification.yml
+**Source URL:** Custom-generated
 
-**Yara Rules:** None found.
+##### Yara Rules
+
+```yara
+rule log4j_jdbcappender_malicious_jndi {
+  meta:
+    author = "Custom-generated"
+    date = "2023-10-27"
+    description = "Detects malicious JNDI patterns in Log4j configuration files indicative of CVE-2021-44832 exploitation"
+    severity = "high"
+  strings:
+    $s1 = "<JDBCAppender name=" ascii nocase
+    $s2 = "JndiManager" ascii nocase
+    $s3 = "dataSourceName=" ascii nocase
+    $s4 = "jdbc:ldap://" ascii nocase
+    $s5 = "jdbc:rmi://" ascii nocase
+  condition:
+    $s1 and $s2 and ($s3 or $s4 or $s5)
+}
+```
+
+**Description:** This custom YARA rule scans Log4j configuration files for the combination of `JDBCAppender` and `JndiManager` keywords along with malicious `jdbc:ldap://` or `jdbc:rmi://` patterns, which could indicate a successful exploitation or preparation for CVE-2021-44832.
+
+**Source URL:** Custom-generated
+
+</details>
