@@ -44,22 +44,21 @@ def get_db_collection(collection_name="sboms"):
 def load_and_store_sbom(sbom_path):
     """Loads an SBOM, checks for duplicates, and stores it in MongoDB if new."""
     with open(sbom_path, 'r') as f:
-        sbom_data = json.load(f)
+        sbom_content = f.read()
 
     # Use a hash of the content to check for duplicates
-    sbom_content_str = json.dumps(sbom_data.get("components", []), sort_keys=True)
-    sbom_hash = hashlib.sha256(sbom_content_str.encode('utf-8')).hexdigest()
+    sbom_hash = hashlib.sha256(sbom_content.encode('utf-8')).hexdigest()
 
     collection = get_db_collection()
     existing_sbom = collection.find_one({"_id": sbom_hash})
 
     if existing_sbom:
         print("Duplicate SBOM detected. Using existing data for analysis.")
-        return existing_sbom["content"], False
+        return existing_sbom["raw_content"], False
     else:
         collection.insert_one({
             "_id": sbom_hash,
-            "content": sbom_data,
+            "raw_content": sbom_content,
             "filename": os.path.basename(sbom_path)
         })
-        return sbom_data, True
+        return sbom_content, True
