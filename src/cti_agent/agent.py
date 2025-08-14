@@ -64,12 +64,12 @@ async def run_analysis(sbom_file_path: str, crawl_depth: int = 2):
     sbom_data, is_new_sbom = data_manager.load_and_store_sbom(sbom_file_path)
     
     # 1. Extract components from SBOM
-    components = await extract_entities_from_sbom(sbom_data)
-    print(f"Found {len(components)} components in SBOM.")
+    sbom_entities = await extract_entities_from_sbom(sbom_data)
+    print(f"Found {len(sbom_entities.packages)} components in SBOM.")
 
     # 2. Deterministic CVE Lookup and Enrichment
     all_vulnerabilities = {}
-    for component in components:
+    for component in sbom_entities.packages:
         print(f"Processing component: {component.name} v{component.version}")
         cpe_string = await tools.get_cpe_for_component(component.name, component.version)
         print(f"  Generated CPE: {cpe_string}")

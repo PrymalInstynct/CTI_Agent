@@ -94,10 +94,11 @@ async def get_cpe_for_component(component_name: str, component_version: str) -> 
     """Generates a CPE 2.3 string for a component using an LLM for accuracy."""
     cpe_agent = Agent(
         'google-gla:gemini-2.5-flash',
-        system_prompt=f"""You are an expert at generating Common Platform Enumeration (CPE) strings. 
-        Your task is to generate the most accurate CPE 2.3 string for a given software component and version. 
+        system_prompt=f"""You are an expert at generating Common Platform Enumeration (CPE) strings.
+        Your task is to generate the most accurate CPE 2.3 string for a given software component and version.
+        The format for a CPE 2.3 string is `cpe:2.3:a:<vendor>:<product>:<version>:*:*:*:*:*:*:*`.
         Provide only the CPE string as a direct response, without any additional explanation or text.
-        
+
         Component: {component_name}
         Version: {component_version}
         """
@@ -140,9 +141,16 @@ async def find_defensive_measures(cve_id: str) -> dict:
 
     for rule_type in ["snort", "sigma", "yara"]:
         # First, search for attributed rules
+        where_clause = {
+            "$and": [
+                {"rule_type": {"$eq": rule_type}},
+                {"cve_id": {"$eq": cve_id}},
+                {"source": {"$ne": "Custom-generated"}}
+            ]
+        }
         attributed_results = vector_store.search(
             query=f"{rule_type.title()} rules for {cve_id}",
-            where={"rule_type": rule_type, "cve_id": cve_id, "source": {"$ne": "Custom-generated"}}
+            where=where_clause
         )
 
         rules = []
