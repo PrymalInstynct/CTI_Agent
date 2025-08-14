@@ -17,6 +17,7 @@ dependencies = [
     "webdriver-manager",
     "pypdf2",
     "googlesearch-python",
+    "packageurl-python",
 ]
 
 [project.scripts]
